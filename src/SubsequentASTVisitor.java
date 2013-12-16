@@ -1,10 +1,12 @@
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
+import java.util.TreeSet;
 
 
 import org.eclipse.jdt.core.dom.ASTVisitor;
@@ -19,6 +21,7 @@ import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.SuperConstructorInvocation;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.neo4j.graphdb.Node;
 
@@ -43,7 +46,7 @@ class SubsequentASTVisitor extends ASTVisitor
 	public int tolerance;
 	public int MAX_CARDINALITY;
 	private HashMultimap<String, String> localMethods;
-	
+	private JSONObject json;
 	public void printFields()
 	{
 		System.out.println("methodReturnTypesMap: " + methodReturnTypesMap);
@@ -61,18 +64,18 @@ class SubsequentASTVisitor extends ASTVisitor
 		model = previousVisitor.model;
 		cu = previousVisitor.cu;
 		cutype = previousVisitor.cutype;
-		variableTypeMap = previousVisitor.variableTypeMap;
-		methodReturnTypesMap = previousVisitor.methodReturnTypesMap;
-		printtypes = previousVisitor.printtypes;
-		printmethods = previousVisitor.printmethods;
-		printTypesMap = previousVisitor.printTypesMap;
-		printMethodsMap = previousVisitor.printMethodsMap;
-		importList = previousVisitor.importList;
+		variableTypeMap = new HashMap<String, HashMultimap<ArrayList<Integer>,Node>>(previousVisitor.variableTypeMap);
+		methodReturnTypesMap = new HashMap<String, HashMultimap<ArrayList<Integer>,Node>>(previousVisitor.methodReturnTypesMap);
+		printtypes = HashMultimap.create(previousVisitor.printtypes);
+		printmethods = HashMultimap.create(previousVisitor.printmethods);
+		printTypesMap = new HashMap<String, Integer>(previousVisitor.printTypesMap);
+		printMethodsMap = new HashMap<String, Integer>(previousVisitor.printMethodsMap);
+		importList = new HashSet<String>(previousVisitor.importList);
 		classNames = previousVisitor.classNames;
-		superclassname = previousVisitor.superclassname;
-		interfaces = previousVisitor.interfaces;
-		methodContainerCache = previousVisitor.methodContainerCache;
-		methodReturnCache = previousVisitor.methodReturnCache;
+		superclassname = new String(previousVisitor.superclassname);
+		interfaces = new ArrayList(previousVisitor.interfaces);
+		methodContainerCache = new HashMap<Node, Node>(previousVisitor.methodContainerCache);
+		methodReturnCache = new HashMap<Node, Node>(previousVisitor.methodReturnCache);
 		tolerance = previousVisitor.tolerance;
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;
 		localMethods = previousVisitor.localMethods;
@@ -428,15 +431,15 @@ class SubsequentASTVisitor extends ASTVisitor
 		}
 	}
 
-	public JSONObject printJson()
+	public void setJson()
 	{
 		checkForNull();
-
+		
 		//Add to primitive and uncomment to remove unwanted elements
 		//String[] primitive = {"int","float","char","long","boolean","String","byte[]","String[]","int[]","float[]","char[]","long[]","byte"};
 		String[] primitive={};
-		JSONObject main_json=new JSONObject();
 
+		JSONObject main_json=new JSONObject();
 		for(Integer key : printtypes.keySet())
 		{
 			int flag = 0;
@@ -480,7 +483,8 @@ class SubsequentASTVisitor extends ASTVisitor
 				}
 			}
 		}
-		for(Integer key:printmethods.keySet())
+		
+		for(Integer key : printmethods.keySet())
 		{
 			List<String> namelist = new ArrayList<String>();
 			String mname = null;
@@ -517,28 +521,76 @@ class SubsequentASTVisitor extends ASTVisitor
 			{
 				e.printStackTrace();
 			}
-			return(ret);
+			this.json = ret;
+			//return(ret);
 		}
 		else
 		{
-			return(main_json);
+			this.json = main_json;
+			//return(main_json);
 		}
+	}
+	
+	public JSONObject getJson()
+	{
+		return sortJSON(this.json);
+	}
+
+	private JSONObject sortJSON(JSONObject json) 
+	{
+		Comparator<JSONObject> comprator = new Comparator<JSONObject>() {
+			@Override
+			public int compare(JSONObject o1, JSONObject o2)
+			{
+				return(o1.getInt("character") - o2.getInt("character"));
+			}
+		};
+		TreeSet<JSONObject> set = new TreeSet<JSONObject>(comprator);
+		
+		JSONArray array = (JSONArray) json.get("api_elements");
+		for(int i=0; i<array.length(); i++)
+		{
+			JSONObject entry = (JSONObject) array.get(i);
+			set.add(entry);
+		}
+		
+		JSONObject newObj = new JSONObject();
+		for(JSONObject obj : set)
+		{
+			newObj.accumulate("api_elements", obj);
+		}
+		
+		return newObj;
 	}
 
 	public void checkForNull()
 	{
+		printtypes.removeAll(null);
+		printmethods.removeAll(null);
 		for(Integer key : printtypes.keySet())
-			for(Node type_name:printtypes.get(key))
+		{
+			for(Node type_name : printtypes.get(key))
 			{
 				if(type_name==null)
 					printtypes.remove(key, type_name);
 			}
+		}
+		
 		for(Integer key : printmethods.keySet())
-			for(Node method_name:printmethods.get(key))
+		{
+			for(Node method_name : printmethods.get(key))
 			{
 				if(method_name==null)
 					printmethods.remove(key, method_name);
 			}
+		}
+	}
+
+	public SubsequentASTVisitor sortByLineNumber() 
+	{
+		// TODO Auto-generated method stub
+		
+		return null;
 	}
 
 

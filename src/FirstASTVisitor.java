@@ -53,6 +53,7 @@ class FirstASTVisitor extends ASTVisitor
 	public HashMap<Node, Node> methodContainerCache;
 	public HashMap<Node, Node> methodReturnCache;
 	public HashMap<Node, TreeSet<Node>> methodParameterCache;
+	public HashMap<String, IndexHits<Node>> parentNodeCache;
 	
 	public HashMultimap<String, String> localMethods;
 	
@@ -134,11 +135,14 @@ class FirstASTVisitor extends ASTVisitor
 		printTypesMap = new HashMap<String, Integer>();
 		printMethodsMap = new HashMap<String, Integer>();
 		importList = new HashSet<String>();
+		
 		candidateClassNodesCache = new HashMap<String, ArrayList<Node>>();
 		candidateMethodNodesCache = new HashMap<String, ArrayList<Node>>();
 		methodContainerCache = new HashMap<Node, Node>();
 		methodReturnCache = new HashMap<Node, Node>();
 		methodParameterCache = new HashMap<Node, TreeSet<Node>>();
+		parentNodeCache = new HashMap<String, IndexHits<Node>>();
+		
 		importList = new HashSet<String>();
 		classNames = new Stack<String>();
 		superclassname = new String();
@@ -453,7 +457,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 				for(Node candidateSuperClass : candidateSuperClassNodes)
 				{
 					ArrayList<Node> candidateMethods = new ArrayList<Node>();
-					IndexHits<Node> candidateSuperClassMethods = model.getMethodNodesInClassNode(candidateSuperClass, treeNodeMethodExactName);
+					ArrayList<Node> candidateSuperClassMethods = model.getMethodNodesInClassNode(candidateSuperClass, treeNodeMethodExactName, candidateMethodNodesCache);
 					for(Node node : candidateSuperClassMethods)
 					{
 						candidateMethods.add(node);
@@ -462,7 +466,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 					for(Node candidateSuperClassParent : candidateSuperClassParents)
 					{
 						//System.out.println("here" + treeNodeString);
-						IndexHits<Node> candidateSuperClassParentsMethods = model.getMethodNodesInClassNode(candidateSuperClassParent, treeNodeMethodExactName);
+						ArrayList<Node> candidateSuperClassParentsMethods = model.getMethodNodesInClassNode(candidateSuperClassParent, treeNodeMethodExactName, candidateMethodNodesCache);
 						for(Node node : candidateSuperClassParentsMethods)
 						{
 							candidateMethods.add(node);
@@ -577,7 +581,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 
 			for(Node candidateClassNode : candidateClassNodes)
 			{
-				IndexHits<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode,treeNodeMethodExactName);
+				ArrayList<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode,treeNodeMethodExactName, candidateMethodNodesCache);
 				int hasCandidateFlag = 0;
 				for(Node candidateMethodNode : candidateMethodNodes)
 				{
@@ -606,7 +610,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 					for(Node parentNode: parentNodeList)
 					{
 						//ArrayList<Node> methodNodes = model.getMethodNodes(parentNode, methodNodesInClassNode);
-						IndexHits<Node> methodNodes = model.getMethodNodesInClassNode(parentNode, treeNodeMethodExactName);
+						ArrayList<Node> methodNodes = model.getMethodNodesInClassNode(parentNode, treeNodeMethodExactName, candidateMethodNodesCache);
 						for(Node methodNode : methodNodes)
 						{
 							String candidateMethodExactName = (String)methodNode.getProperty("exactName");
@@ -658,7 +662,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			for(Node candidateClassNode : candidateClassNodes)
 			{
 				//ArrayList<Node> candidateMethodNodes = model.getMethodNodes(candidateClassNode, methodNodesInClassNode);
-				IndexHits<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, treeNodeMethodExactName);
+				ArrayList<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, treeNodeMethodExactName, candidateMethodNodesCache);
 				for(Node candidateMethodNode : candidateMethodNodes)
 				{
 					String candidateMetodExactName = (String)candidateMethodNode.getProperty("exactName");
@@ -714,7 +718,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 				//System.out.println(candidateClassNode.getProperty("id"));
 				String candidateClassExactName = (String) candidateClassNode.getProperty("exactName");
 				//ArrayList<Node> candidateMethodNodes = model.getMethodNodes(candidateClassNode, methodNodesInClassNode);
-				IndexHits<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, treeNodeMethodExactName);
+				ArrayList<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, treeNodeMethodExactName, candidateMethodNodesCache);
 				for(Node candidateMethodNode : candidateMethodNodes)
 				{
 					String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
@@ -952,7 +956,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 					flag=0;
 					break;
 				}
-				else if(model.checkIfParentNode(graphParam, arg))
+				else if(model.checkIfParentNode(graphParam, arg, parentNodeCache))
 				{
 					flag=0;
 					break;
@@ -1045,7 +1049,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			for(Node candidateClassNode : candidateClassNodes)
 			{
 				//Collection<Node> candidateMethodNodes=model.getMethodNodes(candidateClassNode, methodNodesInClassNode);
-				IndexHits<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, treeNode.getName().toString());
+				ArrayList<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, treeNode.getName().toString(), candidateMethodNodesCache);
 				for(Node candidateMethodNode : candidateMethodNodes)
 				{
 					String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
@@ -1079,7 +1083,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 				for(Node candidateClassNode : candidateClassNodes)
 				{
 					//Collection<Node> candidateMethodNodes = model.getMethodNodes(candidateClassNode, methodNodesInClassNode);
-					IndexHits<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, treeNode.getName().toString());
+					ArrayList<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, treeNode.getName().toString(), candidateMethodNodesCache);
 					for(Node candidateMethodNode : candidateMethodNodes)
 					{
 						String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
@@ -1127,7 +1131,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 		for(Node candidateClassNode : candidateClassNodes)
 		{
 			//ArrayList<Node> candidateMethodNodes = model.getMethodNodes(candidateClassNode, methodNodesInClassNode);
-			IndexHits<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, "<init>");
+			ArrayList<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, "<init>", candidateMethodNodesCache);
 			for(Node candidateMethodNode : candidateMethodNodes)
 			{
 				String candidateMethodExactname = (String)candidateMethodNode.getProperty("exactName");
@@ -1213,7 +1217,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 		for(Node candidateClassNode : candidateClassNodes)
 		{
 			//Collection<Node>candidateMethodElements = model.getMethodNodes(candidateClassNode, methodNodesInClassNode);
-			IndexHits<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, "<init>");
+			ArrayList<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, "<init>", candidateMethodNodesCache);
 			for(Node candidateMethodElement : candidateMethodNodes)
 			{
 				String candidateMethodExactName = (String)candidateMethodElement.getProperty("exactName");
@@ -1268,7 +1272,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 		for(Node candidateClassNode : candidateClassNodes)
 		{
 			//Collection<Node> candidateMethodNodes = model.getMethodNodes(candidateClassNode, methodNodesInClassNode);
-			IndexHits<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, treeNodeName);
+			ArrayList<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, treeNodeName, candidateMethodNodesCache);
 			for(Node candidateMethodNode : candidateMethodNodes)
 			{
 				String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
@@ -1314,7 +1318,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 					for(Node candidateClassNode : candidateClassNodes)
 					{
 						//Collection<Node>candidateMethodNodes = model.getMethodNodes(candidateClassNode, methodNodesInClassNode);
-						IndexHits<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, methodDeclarationName);
+						ArrayList<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, methodDeclarationName, candidateMethodNodesCache);
 						for(Node candidateMethodNode : candidateMethodNodes)
 						{
 							String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
@@ -1363,7 +1367,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 		{
 			//System.out.println("yes: "+candidateClassNode.getProperty("id"));
 			//Collection<Node> candidateMethodNodes = model.getMethodNodes(candidateClassNode, methodNodesInClassNode);
-			IndexHits<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, "<init>");
+			ArrayList<Node> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, "<init>", candidateMethodNodesCache);
 			for(Node candidateMethodNode : candidateMethodNodes)
 			{
 				String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");

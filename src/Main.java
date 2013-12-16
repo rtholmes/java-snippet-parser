@@ -13,6 +13,9 @@ import org.dom4j.io.SAXReader;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.neo4j.graphdb.Node;
+
+import com.google.common.collect.HashMultimap;
 
 
 
@@ -21,6 +24,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
@@ -94,9 +98,12 @@ public class Main
 			previous_visitor = current_visitor;
 			current_visitor = new_visitor;
 		}
-		//current_visitor.printFields();
-		return current_visitor.printJson();
+		current_visitor.printFields();
+		current_visitor.setJson();
+		return current_visitor.getJson();
 	}
+
+
 
 	private static boolean compareMaps(SubsequentASTVisitor curr, SubsequentASTVisitor prev) 
 	{
@@ -110,8 +117,7 @@ public class Main
 		else
 			return false;
 	}
-
-
+	
 	private static void registerShutdownHook(final GraphDatabase db)
 	{
 		// Registers a shutdown hook for the Neo4j and index service instances
