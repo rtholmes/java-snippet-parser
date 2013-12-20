@@ -25,7 +25,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.neo4j.graphdb.Node;
 
-
 class SubsequentASTVisitor extends ASTVisitor
 {
 	public HashMap<Node, Node> methodContainerCache;
@@ -73,7 +72,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		importList = new HashSet<String>(previousVisitor.importList);
 		classNames = previousVisitor.classNames;
 		superclassname = new String(previousVisitor.superclassname);
-		interfaces = new ArrayList(previousVisitor.interfaces);
+		interfaces = new ArrayList<Object>(previousVisitor.interfaces);
 		methodContainerCache = new HashMap<Node, Node>(previousVisitor.methodContainerCache);
 		methodReturnCache = new HashMap<Node, Node>(previousVisitor.methodReturnCache);
 		tolerance = previousVisitor.tolerance;
@@ -172,7 +171,6 @@ class SubsequentASTVisitor extends ASTVisitor
 
 	public void endVisit(MethodInvocation treeNode)
 	{
-		long start = System.nanoTime();
 		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
 		Expression expression=treeNode.getExpression();
 		String treeNodeString = treeNode.toString();
@@ -195,7 +193,6 @@ class SubsequentASTVisitor extends ASTVisitor
 				Node returnNode = model.getMethodReturn(method, methodReturnCache);
 				if(candidateReturnNodes.contains(returnNode) == true)
 				{
-					//System.out.println(method.getProperty("id") + " : " + returnNode.getProperty("id"));
 					newMethodNodes.add(method);
 					newReturnNodes.add(returnNode);
 				}
@@ -214,7 +211,6 @@ class SubsequentASTVisitor extends ASTVisitor
 		}
 		else if(variableTypeMap.containsKey(expression.toString()))
 		{
-			//System.out.println("-- here " + startPosition);
 			HashMultimap<ArrayList<Integer>, Node> temporaryMap1 = variableTypeMap.get(expression.toString());
 			if(temporaryMap1 == null)
 				return;
@@ -321,8 +317,6 @@ class SubsequentASTVisitor extends ASTVisitor
 			temporaryMap2.removeAll(rightScopeArray2);
 			temporaryMap2.putAll(rightScopeArray2, newReturnNodes);
 		}
-		long end = System.nanoTime();
-		//System.out.println(model.getCurrentMethodName() + " - " + treeNode.toString() + " : " + String.valueOf((double)(end-start)/1000000000));
 	}
 
 	private String getCorrespondingImport(String classID) 
@@ -461,6 +455,7 @@ class SubsequentASTVisitor extends ASTVisitor
 					if(isprimitive == 0)
 					{
 						String nameOfClass = (String)type_name.getProperty("id");
+						nameOfClass = JSONObject.quote(nameOfClass);
 						namelist.add("\""+nameOfClass+"\"");
 						if(flag == 0)
 						{
@@ -481,6 +476,7 @@ class SubsequentASTVisitor extends ASTVisitor
 					json.accumulate("character", Integer.toString(key));
 					main_json.accumulate("api_elements", json);
 				}
+				
 			}
 		}
 		
@@ -493,9 +489,12 @@ class SubsequentASTVisitor extends ASTVisitor
 				for(Node method_name : printmethods.get(key))
 				{
 					String nameOfMethod = (String)method_name.getProperty("id");
+					nameOfMethod = JSONObject.quote(nameOfMethod);
 					namelist.add("\""+nameOfMethod+"\"");
 					mname=(String) method_name.getProperty("exactName");
 				}
+				
+				
 				if(namelist.isEmpty() == false)
 				{
 					JSONObject json = new JSONObject();
@@ -511,7 +510,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		}
 		if(main_json.isNull("api_elements"))
 		{
-			String emptyJSON = "{\"api_elements\": [{ \"precision\": \"\",\"name\": \"\",\"line_number\": \"\",\"type\": \"\",\"elements\": \"\"}]}" ;
+			String emptyJSON = "{\"api_elements\": []}" ;
 			JSONObject ret = new JSONObject();
 			try 
 			{
@@ -522,18 +521,33 @@ class SubsequentASTVisitor extends ASTVisitor
 				e.printStackTrace();
 			}
 			this.json = ret;
-			//return(ret);
 		}
 		else
 		{
 			this.json = main_json;
-			//return(main_json);
 		}
 	}
 	
 	public JSONObject getJson()
 	{
-		return sortJSON(this.json);
+		if (this.json.get("api_elements") instanceof JSONObject)
+		{
+			return sortJSON(this.json);
+		}
+		else if (this.json.get("api_elements") instanceof JSONArray)
+		{
+			JSONArray elements = (JSONArray) this.json.get("api_elements");
+			if(elements.length() == 0)
+			{
+				return this.json;
+			}
+			else
+			{
+				return sortJSON(this.json);
+			}
+		}
+		else
+			return this.json;
 	}
 
 	private JSONObject sortJSON(JSONObject json) 
@@ -542,7 +556,12 @@ class SubsequentASTVisitor extends ASTVisitor
 			@Override
 			public int compare(JSONObject o1, JSONObject o2)
 			{
-				return(o1.getInt("character") - o2.getInt("character"));
+				if(o1.getInt("character") != o2.getInt("character"))
+					return(o1.getInt("character") - o2.getInt("character"));
+				else
+				{
+					return 1;
+				}
 			}
 		};
 		TreeSet<JSONObject> set = new TreeSet<JSONObject>(comprator);
@@ -553,7 +572,6 @@ class SubsequentASTVisitor extends ASTVisitor
 			JSONObject entry = (JSONObject) array.get(i);
 			set.add(entry);
 		}
-		
 		JSONObject newObj = new JSONObject();
 		for(JSONObject obj : set)
 		{
@@ -585,13 +603,4 @@ class SubsequentASTVisitor extends ASTVisitor
 			}
 		}
 	}
-
-	public SubsequentASTVisitor sortByLineNumber() 
-	{
-		// TODO Auto-generated method stub
-		
-		return null;
-	}
-
-
 }

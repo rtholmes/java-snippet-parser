@@ -14,4 +14,11 @@
 	<natures>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>src/JavaBaker.java</name>
+			<type>1</type>
+			<location>/home/s23subra/workspace/Java Snippet Parser/src/JavaBaker.java</location>
+		</link>
+	</linkedResources>
 </projectDescription>

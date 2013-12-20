@@ -8,10 +8,6 @@ import org.neo4j.kernel.StoreLockException;
 
 import java.io.*;
 
-import ca.uwaterloo.cs.se.inconsistency.core.model2.Model;
-import ca.uwaterloo.cs.se.inconsistency.core.model2.io.Model2XMLReader;
-import ca.uwaterloo.cs.se.inconsistency.core.model2.so.*;
-
 class Parser{
 
 	private int flag = 0;

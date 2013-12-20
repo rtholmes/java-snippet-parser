@@ -41,7 +41,7 @@ import org.json.JSONObject;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.index.IndexHits;
 
-
+@SuppressWarnings("unchecked")
 class FirstASTVisitor extends ASTVisitor
 {
 	public GraphDatabase model;
@@ -405,7 +405,6 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 
 	public void endVisit(MethodInvocation treeNode)
 	{
-		long start = System.nanoTime();
 		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
 		Expression expression = treeNode.getExpression();
 		String treeNodeMethodExactName = treeNode.getName().toString();
@@ -800,8 +799,6 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 				printtypes.putAll(printTypesMap.get(expressionString), replacementClassNodesList);
 			}
 		}
-		long end = System.nanoTime();
-		//System.out.println(model.getCurrentMethodName() + " - " + treeNode.toString() + " : " + String.valueOf((double)(end-start)/1000000000));
 	}
 
 	private ArrayList<Integer> getNodeSet(HashMultimap<ArrayList<Integer>, Node> celist2, ArrayList<Integer> scopeArray) 
@@ -826,15 +823,13 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 
 	private boolean matchParams(Node me, List<ASTNode> params) 
 	{
-		long start = System.nanoTime();
 		ArrayList<HashSet<String>> nodeArgs = new ArrayList<HashSet<String>>();
-		TreeSet<Node>graphNodes = new TreeSet<Node>(new Comparator<Node>()
-				{
+		TreeSet<Node>graphNodes = new TreeSet<Node>(new Comparator<Node>() {
 			public int compare(Node a, Node b)
 			{
 				return (Integer)a.getProperty("paramIndex")-(Integer)b.getProperty("paramIndex");
 			}
-				});
+		});
 		graphNodes = model.getMethodParams(me, methodParameterCache);
 		if(graphNodes.size() != params.size())
 			return false;
@@ -967,9 +962,6 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			if(flag==1)
 				return false;
 		}
-		//System.out.println("MATCH : "+me.getProperty("id"));
-		long end = System.nanoTime();
-		//System.out.println(model.getCurrentMethodName() + " - " + me.getProperty("id") + " : " + String.valueOf((double)(end-start)/1000000000));
 		return true;
 		}
 
