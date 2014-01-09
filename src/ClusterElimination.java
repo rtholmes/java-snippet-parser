@@ -3,75 +3,139 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class ClusterElimination
 {
-	public static void main(String[] args) throws IOException 
+	
+	String collisionsDetectedFile;
+	String originalClassesFile;
+	HashSet<HashSet<String>> clustersSet;   		//A hashset of hashsets of clusters
+	HashMap<String, HashSet<String>> clustersMap;	//A mapping from shortname to clusters
+	HashMap<String, String> originalClassMap;		//A mapping from shortname to the right package (if a cluster)
+	HashMap<String, String> finalMap;				
+	
+	
+	public ClusterElimination(String arg1, String arg2) throws IOException 
 	{
-		
-		String collisionsDetected = "class-collisions_update.txt";
-		String originalClasses = "forReid.txt";
-		
-		HashMap<String, ArrayList<String>> clustersMap = getClusters(collisionsDetected);
-		HashMap<String, String> originalClassMap = originalClass(originalClasses);
-		
-		//Maps a short class name to the right package. Query this whenever we obtain a set with cardinality > 1
-		HashMap<String, String> finalMap = populate(clustersMap, originalClassMap);
-		test(clustersMap, originalClassMap);
+		collisionsDetectedFile = arg1;
+		originalClassesFile = arg2;
+		getClustersMap();
+		getOriginalClassesMap();
 	}
 	
-	private static HashMap<String, String> populate(
-			HashMap<String, ArrayList<String>> clustersMap,
-			HashMap<String, String> originalClassMap) 
+	
+	//Check if it is really a cluster before calling this.
+	private String findRightClass(String shortName)
 	{
-		HashMap<String, String> finalMap = new HashMap<String, String>();
-		
+		String rightPackage = findRightPackage(shortName);
+		if(rightPackage != null)
+		{
+			HashSet<String> cluster = clustersMap.get(shortName);
+			for(String clusterCandidate : cluster)
+			{
+				System.out.println(clusterCandidate);
+				String clusterPackage = clusterCandidate.substring(0, clusterCandidate.lastIndexOf("."));
+				if(rightPackage.indexOf(clusterPackage) != -1)
+					return clusterCandidate;
+			}
+		}
 		return null;
 	}
 
-	private static void test(HashMap<String, ArrayList<String>> clustersMap, HashMap<String, String> originalClassMap)
+	private String findRightPackage(String shortName)
 	{
-		int yc = 0, nc = 0;
-		/*for(String shortClassName : originalClassMap.keySet())
-		{
-			if(clustersMap.containsKey(shortClassName))
-			{
-				yc++;
-				System.out.println("yes");
-			}
-			else
-			{
-				nc++;
-				System.out.println("no");
-			}
-		}*/
+		if(originalClassMap.containsKey(shortName))
+			return originalClassMap.get(shortName);
+		else
+			return null;
+	}
+
+	public static void main(String[] args) throws IOException 
+	{
+		ClusterElimination celim = new ClusterElimination("class-collisions_update.txt", "forReid.txt");
 		
-		for(ArrayList<String> list : clustersMap.values())
-		{
-			for(String s : list)
-			{
-				String[] arr = s.split("\\.");
-				String shortName = arr[arr.length - 1];
-				System.out.println(s);
-				if(originalClassMap.containsKey(shortName))
-				{
-					yc++;
-					System.out.println("-- "+originalClassMap.get(shortName));
-				}
-				else
-					nc++;
-			}
-			
-		}
-		System.out.println(clustersMap.values().size());
-		System.out.println("yes: " + yc + " nc : " + nc);
+		System.out.println(celim.findRightClass("TaggedComponent"));
 		
+		HashSet<String> x = new HashSet<String>();
+		System.out.println(celim.checkIfCluster(x));
+		//celim.populate();
+		//celim.test();
+		HashSet<String> cluster = celim.clustersMap.get("Iterable");
+		for(String xy : cluster)
+			System.out.println(xy);
 	}
 	
-	private static HashMap<String, String> originalClass(String originalClasses) throws IOException
+	
+	
+	private HashMap<String, String> populate() 
 	{
-		HashMap<String, String> map = new HashMap<String, String>();
-		BufferedReader br = new BufferedReader(new FileReader(originalClasses));
+		finalMap = new HashMap<String, String>();
+		
+		return null;
+	}
+	
+	private boolean checkIfCluster(HashSet<String> set)
+	{
+		String shortName = "";
+		for(String s : set)
+		{
+			String arr[] = s.split("\\.");
+			shortName = arr[arr.length-1];
+			break;
+		}
+		
+		if(clustersMap.containsKey(shortName))
+		{
+			HashSet<String> clusterSet = clustersMap.get(shortName);
+			int yc = 0, nc = 0;
+			for(String s : set)
+			{
+				if(clusterSet.contains(s) == false)
+				{
+					nc++;
+				}
+				else
+					yc++;
+			}
+			if(yc >= set.size()-3)
+				return true;
+			else
+				return false;
+		}
+		else
+			return false;
+		
+		/*if(clustersSet.contains(set))
+			return true;
+		else
+			return false;*/
+	}
+	
+
+	private void test()
+	{
+		int yc = 0, nc = 0;
+		for(String shortName : clustersMap.keySet())
+		{
+			if(originalClassMap.containsKey(shortName))
+			{
+				yc++;
+				System.out.println(shortName);
+				System.out.println("-- "+ this.findRightClass(shortName));
+			}
+			else
+				nc++;
+
+		}
+		//System.out.println(clustersMap.values().size());
+		System.out.println("yes: " + yc + " nc : " + nc);
+	}
+	
+	private void getOriginalClassesMap() throws IOException
+	{
+		originalClassMap = new HashMap<String, String>();
+		BufferedReader br = new BufferedReader(new FileReader(originalClassesFile));
 		String s = "";
 		while((s = br.readLine())!=null)
 		{
@@ -84,20 +148,20 @@ public class ClusterElimination
 				{
 					packageName = arr[0].replace(" ", "").replace('/', '.').substring(1);
 				}
-				map.put(className, packageName);
+				originalClassMap.put(className, packageName);
 			}
 		}
 		br.close();
-		return map;
 	}
 	
-	private static HashMap<String, ArrayList<String>> getClusters(String collisionsDetected) throws IOException 
+	private void getClustersMap() throws IOException 
 	{
-		HashMap<String, ArrayList<String>> map = new HashMap<String, ArrayList<String>>();
-		BufferedReader br = new BufferedReader(new FileReader(collisionsDetected));
+		clustersMap = new HashMap<String, HashSet<String>>();
+		clustersSet = new HashSet<HashSet<String>>();
+		BufferedReader br = new BufferedReader(new FileReader(collisionsDetectedFile));
 		String s = "";
 		String classShortName = new String();
-		ArrayList<String> list = new ArrayList<String>();
+		HashSet<String> set = new HashSet<String>();
 		while((s = br.readLine())!=null)
 		{
 			String line = s;
@@ -107,14 +171,15 @@ public class ClusterElimination
 				line = s.substring(5);
 				//line = line.substring(0,(line.lastIndexOf(':')-1)).replace('$', '.');
 				line = line.substring(0,(line.lastIndexOf(':')-1));
-				list.add(line);
+				set.add(line);
 			}
 			else
 			{
 				if(!classShortName.isEmpty())
 				{
-					map.put(classShortName, list);
-					list = new ArrayList<String>();
+					clustersSet.add(set);
+					clustersMap.put(classShortName, set);
+					set = new HashSet<String>();
 				}
 				//line = line.substring(0, line.lastIndexOf(':')-1).replace('$', '.');
 				line = line.substring(0, line.lastIndexOf(':')-1);
@@ -122,10 +187,9 @@ public class ClusterElimination
 				
 			}
 		}
-		map.put(classShortName, list);
-		
+		clustersMap.put(classShortName, set);
+		clustersSet.add(set);
 		br.close();
-		return map;
 	}
 	
 	
