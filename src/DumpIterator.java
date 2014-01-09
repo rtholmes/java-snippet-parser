@@ -7,6 +7,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
@@ -16,6 +17,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.dom4j.Document;
@@ -29,7 +32,7 @@ import org.json.JSONObject;
 @SuppressWarnings("rawtypes")
 public class DumpIterator
 {
-	
+
 	private static void registerShutdownHook(final GraphDatabase db)
 	{
 		Runtime.getRuntime().addShutdownHook( new Thread()
@@ -41,107 +44,129 @@ public class DumpIterator
 			}
 		} );
 	}
-	
+
 	public static void iterateOver(Element root, Connection connection, Parser parser,final int tolerance,final int max_cardinality, final GraphDatabase db) throws NullPointerException, IOException, ClassNotFoundException, SQLException, TimeoutException
 	{
 
 		int finished = 0;
 		int count = 0;
-		
+
 		for (Iterator i = root.elementIterator(); i.hasNext(); ) 
 		{
+
+			Statement statement = connection.createStatement();
 			count ++;
 			Element post = (Element) i.next();
-			String qid = post.attributeValue("qid");
-			String aid = post.attributeValue("aid");
-			String code = post.element("code").getText();
-			String codeid = post.element("code").attributeValue("id");
-
-			String initcode = code;
-			code = code.replace("&lt;", "<");
-			code = code.replace("&gt;", ">");
-			code = code.replace("&amp;", "&");
-			code = code.replace("&quot;", "\"");
-			final CompilationUnit cu = parser.getCompilationUnitFromString(code);
-			System.out.println("----- \n" + "Actual Code: \n" );
-			System.out.println(code);
-			System.out.println("----- \n" + "Generated Compilation Unit: \n" );
-			System.out.println(cu.toString());
-			final int cutype = parser.getCuType();
-			initcode = StringEscapeUtils.escapeSql(initcode);
-			JSONObject op = null;
-			if(cu != null)
+			//System.out.println(count);
+			if(count>432)
 			{
-				ExecutorService service = Executors.newCachedThreadPool();
-				Callable<JSONObject> call = new Callable<JSONObject>() {
-					public JSONObject call() 
-					{
-						JSONObject jsonObject = JavaBaker.vistAST(db, cu, cutype, tolerance, max_cardinality);
-						return jsonObject;
-					}
-				};
-				Future<JSONObject> ft = service.submit(call);
-				try 
-				{
-					op = ft.get(30, TimeUnit.SECONDS); 
+				String qid = post.attributeValue("qid");
+				String aid = post.attributeValue("aid");
+				String code = post.element("code").getText();
+				String codeid = post.element("code").attributeValue("id");
 
-				} 
-				catch (TimeoutException ex)
+
+				String initcode = code;
+				code = code.replace("&lt;", "<");
+				code = code.replace("&gt;", ">");
+				code = code.replace("&amp;", "&");
+				code = code.replace("&quot;", "\"");
+
+				System.out.println(isXMLLike(code)+ "is XML LIKE");
+
+
+				final CompilationUnit cu = parser.getCompilationUnitFromString(code);
+				System.out.println("----- \n" + "Actual Code: \n" );
+				System.out.println(code);
+				System.out.println("----- \n" + "Generated Compilation Unit: \n" );
+				System.out.println(cu.toString());
+				final int cutype = parser.getCuType();
+
+
+				initcode = StringEscapeUtils.escapeSql(initcode);
+
+				String other_query1 = "delete from map where aid = '"+aid+"'";
+				String other_query2 = "insert into map values('"+aid+"','"+qid+"','"+codeid+"','"+initcode+"','"+cutype+"')";
+				statement.executeUpdate(other_query1);
+				statement.executeUpdate(other_query2);
+
+				JSONObject op = null;
+				if(cu != null)
 				{
-					//ft.cancel(true);
-					System.out.println("Timed out");
-				}
-				catch (InterruptedException e) 
-				{
-					System.out.println("interrupted");
-				} 
-				catch (ExecutionException e) 
-				{
-					System.out.println(e.getCause().toString());
-					e.printStackTrace();
-				} 
-			}
-			if(op!=null)
-			{
-				System.out.println(op.toString(3));;
-				finished++;
-				if (op.get("api_elements") instanceof JSONObject)
-				{
-					@SuppressWarnings("unused")
-					JSONObject apielements = op.getJSONObject("api_elements");
-				}
-				else if (op.get("api_elements") instanceof JSONArray)
-				{
-					JSONArray apielements = op.getJSONArray("api_elements");
-					for(int j=0; j < apielements.length(); j++)
+					ExecutorService service = Executors.newCachedThreadPool();
+					Callable<JSONObject> call = new Callable<JSONObject>() {
+						public JSONObject call() 
+						{
+							JSONObject jsonObject = JavaBaker.vistAST(db, cu, cutype, tolerance, max_cardinality);
+							return jsonObject;
+						}
+					};
+					Future<JSONObject> ft = service.submit(call);
+					try 
 					{
-						@SuppressWarnings("unused")
-						JSONObject obj = (JSONObject) apielements.get(j);
+						op = ft.get(60, TimeUnit.SECONDS); 
+
+					} 
+					catch (TimeoutException ex)
+					{
+						//ft.cancel(true);
+						System.out.println("Timed out");
+					}
+					catch (InterruptedException e) 
+					{
+						System.out.println("interrupted");
+					} 
+					catch (ExecutionException e) 
+					{
+						System.out.println(e.getCause().toString());
+						e.printStackTrace();
+					} 
+				}
+				if(op!=null)
+				{
+					System.out.println(op.toString(3));;
+					finished++;
+					String q1 = "delete from types where aid = '"+aid+"'";
+					String q2 = "delete from methods where aid = '"+aid+"'";
+					statement.executeUpdate(q1);
+					statement.executeUpdate(q2);
+					if (op.get("api_elements") instanceof JSONObject)
+					{
+						JSONObject apielements = op.getJSONObject("api_elements");
+						insert(apielements, statement, aid, qid, codeid, code, Integer.toString(cutype));
+					}
+					else if (op.get("api_elements") instanceof JSONArray)
+					{
+						JSONArray apielements = op.getJSONArray("api_elements");
+						for(int j=0; j < apielements.length(); j++)
+						{
+							JSONObject obj = (JSONObject) apielements.get(j);
+							insert(obj, statement, aid, qid, codeid, code, Integer.toString(cutype));
+						}
 					}
 				}
+				System.out.println(count+ ":"+ finished + ":"+qid+":"+aid+":"+codeid);
 			}
-			System.out.println(count+ ":"+ finished + ":"+qid+":"+aid+":"+codeid);
 		}
 	}
 
 	@SuppressWarnings("unused")
-	public static void iterate(Element root, Connection connection, Parser parser) throws NullPointerException, IOException, ClassNotFoundException, SQLException  
+	public static void iterate(Element root, Connection connection, Parser parser,final int tolerance,final int max_cardinality, final GraphDatabase db) throws NullPointerException, IOException, ClassNotFoundException, SQLException  
 	{
- 		TreeSet<String> lru = new TreeSet<String>();
- 		/*
+		HashSet<String> lru = new HashSet<String>();
+		
 		lru.add("gwt");
 		lru.add("apache");
 		lru.add("jodatime");
 		lru.add("xstream");
-		lru.add("httpclient");*/
+		lru.add("httpclient");
 
 
 		int count = 0;
 		int lruCounter = 0;
 		int finished = 0;
-		final GraphDatabase db = parser.getGraph();
-		
-		
+
+
 		TreeSet<String> alreadyParsed = new TreeSet<String>();
 		/*BufferedReader br = new BufferedReader(new FileReader("/home/s23subra/workspace/Java Snippet Parser/alreadyInDb.txt"));
 		String line = null;
@@ -149,7 +174,7 @@ public class DumpIterator
 		{
 			alreadyParsed.add(line.trim());
 		}
-		*/
+		 */
 
 		for (@SuppressWarnings("unchecked")
 		Iterator<Element> i = root.elementIterator(); i.hasNext(); ) 
@@ -172,6 +197,8 @@ public class DumpIterator
 					String code = post.element("code").getText();
 					String codeid = post.element("code").attributeValue("id");
 
+					System.out.println(isXMLLike(code)+ "is XML LIKE");
+					
 					String initcode = code;
 					code = code.replace("&lt;", "<");
 					code = code.replace("&gt;", ">");
@@ -190,10 +217,10 @@ public class DumpIterator
 						}
 					}
 					//if(matchCount<1 || code1.toLowerCase().contains("eclipse")==false &&  code1.toLowerCase().contains("gwt") == false))
-					//if(matchCount<1 )
-					if(false)
+					if(matchCount<1 )
+					//if(false)
 					{
-						//System.out.println("matchcount not exceeded");
+						System.out.println("matchcount not exceeded");
 					}
 					else
 					{
@@ -207,43 +234,34 @@ public class DumpIterator
 
 							String other_query2 = "insert into map values('"+aid+"','"+qid+"','"+codeid+"','"+initcode+"','"+cutype+"')";
 							//System.out.println(other_query2);
-							try
-							{
-							}
-							catch(Exception e)
-							{
-
-							}
+							//statement.executeUpdate(other_query1);
+							//statement.executeUpdate(other_query2);
 						}
 						JSONObject op = null;
 						if(cu != null)
 						{
-							ExecutorService executor = Executors.newSingleThreadExecutor();
-							Callable<JSONObject> task = new Callable<JSONObject>() {
+							ExecutorService service = Executors.newCachedThreadPool();
+							Callable<JSONObject> call = new Callable<JSONObject>() {
 								public JSONObject call() 
 								{
-									return JavaBaker.vistAST(db, cu, cutype, 3, 20);
+									JSONObject jsonObject = JavaBaker.vistAST(db, cu, cutype, tolerance, max_cardinality);
+									return jsonObject;
 								}
 							};
-							Future<JSONObject> future = executor.submit(task);
+							Future<JSONObject> ft = service.submit(call);
 							try 
 							{
-								JSONObject result = future.get(30, TimeUnit.SECONDS); 
-								op = result;
+								op = ft.get(60, TimeUnit.SECONDS); 
 
 							} 
 							catch (TimeoutException ex)
 							{
-								//op = "{\"api_elements\": [{ \"precision\": \"\",\"name\": \"\",\"line_number\": \"\",\"type\": \"\",\"elements\": \"\"}]}";
-								//op = null;
-								future.cancel(true);
-								//executor.shutdownNow();
-								System.out.println(ex.getLocalizedMessage());
-
-							} 
+								//ft.cancel(true);
+								System.out.println("Timed out");
+							}
 							catch (InterruptedException e) 
 							{
-								System.out.println("here");
+								System.out.println("interrupted");
 							} 
 							catch (ExecutionException e) 
 							{
@@ -257,12 +275,12 @@ public class DumpIterator
 							finished++;
 							String q1 = "delete from types where aid = '"+aid+"'";
 							String q2 = "delete from methods where aid = '"+aid+"'";
-							//statement.executeUpdate(q1);
-							//statement.executeUpdate(q2);
+							statement.executeUpdate(q1);
+							statement.executeUpdate(q2);
 							if (op.get("api_elements") instanceof JSONObject)
 							{
 								JSONObject apielements = op.getJSONObject("api_elements");
-								insert(apielements, statement, aid, qid, codeid, code, Integer.toString(cutype));
+								//insert(apielements, statement, aid, qid, codeid, code, Integer.toString(cutype));
 							}
 							else if (op.get("api_elements") instanceof JSONArray)
 							{
@@ -270,7 +288,7 @@ public class DumpIterator
 								for(int j=0; j < apielements.length(); j++)
 								{
 									JSONObject obj = (JSONObject) apielements.get(j);
-									insert(obj, statement, aid, qid, codeid, code, Integer.toString(cutype));
+									//insert(obj, statement, aid, qid, codeid, code, Integer.toString(cutype));
 								}
 							}
 						}
@@ -280,7 +298,7 @@ public class DumpIterator
 							//System.out.println(tags[p]);
 							if(tags[p].equals("java")==false)
 							{
-								//lru.add(tags[p]);
+								lru.add(tags[p]);
 							}
 						}
 						if(lruCounter<10)
@@ -288,7 +306,7 @@ public class DumpIterator
 						else
 						{
 							lruCounter=0;
-							//lru = new TreeSet<String>();
+							lru = new HashSet<String>();
 						}
 						System.out.println(count+ ":"+ finished + ":"+qid+":"+aid+":"+codeid);
 					}
@@ -340,7 +358,7 @@ public class DumpIterator
 					//System.out.println(query);
 				}
 				//System.out.println(query);
-				//statement.executeUpdate(query);
+				statement.executeUpdate(query);
 			}
 		}
 	}
@@ -379,7 +397,45 @@ public class DumpIterator
 			return null;
 		}
 	}
-	
+
+	public static boolean isXMLLike(String inXMLStr) 
+	{
+
+		boolean retBool = false;
+		Pattern pattern;
+		Matcher matcher;
+
+		// REGULAR EXPRESSION TO SEE IF IT AT LEAST STARTS AND ENDS
+		// WITH THE SAME ELEMENT
+		final String XML_PATTERN_STR = "<(\\S+?)(.*?)>(.*?)</\\1>";
+
+
+
+		// IF WE HAVE A STRING
+		if (inXMLStr != null && inXMLStr.trim().length() > 0) 
+		{
+
+			// IF WE EVEN RESEMBLE XML
+			if (inXMLStr.trim().startsWith("<")) {
+
+				pattern = Pattern.compile(XML_PATTERN_STR,
+						Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.MULTILINE);
+
+				// RETURN TRUE IF IT HAS PASSED BOTH TESTS
+				matcher = pattern.matcher(inXMLStr);
+				retBool = matcher.matches();
+			}
+			// ELSE WE ARE FALSE
+		}
+		
+		if(inXMLStr.contains("<!--") || (inXMLStr.contains(":") && !inXMLStr.contains(";")))
+		{
+			retBool = true;
+		}
+
+		return retBool;
+	}
+
 	public static void main(String[] args) throws IOException, NullPointerException, ClassNotFoundException, SQLException, DocumentException, TimeoutException 
 	{
 		long start = System.nanoTime();
@@ -395,10 +451,19 @@ public class DumpIterator
 		{
 			System.out.println("db locked");
 		}
-		
+
 		Connection connection = getDatabase("/home/s23subra/workspace/Java Snippet Parser/javadb_rerun.db");
 		Element root = getCodeXML("/home/s23subra/workspace/stackoverflow/java_codes_tags.xml");
+
+
+
+
+
 		iterateOver(root, connection, parser, tolerance, max_cardinality, db);
+		//iterate(root, connection, parser, tolerance, max_cardinality, db);
+
+
+
 		long end = System.nanoTime();
 		logger.printAccessTime("Total JavaBaker time: ", "", end, start);
 	}

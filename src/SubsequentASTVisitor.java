@@ -1,5 +1,6 @@
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,6 +30,12 @@ class SubsequentASTVisitor extends ASTVisitor
 {
 	public HashMap<Node, Node> methodContainerCache;
 	public HashMap<Node, Node> methodReturnCache;
+	public HashMap<String, ArrayList<Node>> candidateClassNodesCache;
+	public HashMap<String, ArrayList<Node>> candidateMethodNodesCache;
+	public HashMap<Node, ArrayList<Node>> methodParameterCache;
+	public HashMap<String, ArrayList<Node>> parentNodeCache;
+	
+	
 	public GraphDatabase model;
 	public CompilationUnit cu;
 	public int cutype;
@@ -75,6 +82,8 @@ class SubsequentASTVisitor extends ASTVisitor
 		interfaces = new ArrayList<Object>(previousVisitor.interfaces);
 		methodContainerCache = new HashMap<Node, Node>(previousVisitor.methodContainerCache);
 		methodReturnCache = new HashMap<Node, Node>(previousVisitor.methodReturnCache);
+		parentNodeCache = new HashMap<String, ArrayList<Node>>(previousVisitor.parentNodeCache);
+		//parentNodeCache = new HashMap<String, ArrayList<Node>>();
 		tolerance = previousVisitor.tolerance;
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;
 		localMethods = previousVisitor.localMethods;
@@ -103,6 +112,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		interfaces = previousVisitor.interfaces;
 		methodContainerCache = previousVisitor.methodContainerCache;
 		methodReturnCache = previousVisitor.methodReturnCache;
+		parentNodeCache = new HashMap<String, ArrayList<Node>>(previousVisitor.parentNodeCache);
 		tolerance = previousVisitor.tolerance;
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;
 		localMethods = previousVisitor.localMethods;
@@ -430,18 +440,19 @@ class SubsequentASTVisitor extends ASTVisitor
 		checkForNull();
 		
 		//Add to primitive and uncomment to remove unwanted elements
-		//String[] primitive = {"int","float","char","long","boolean","String","byte[]","String[]","int[]","float[]","char[]","long[]","byte"};
-		String[] primitive={};
+		String[] primitive = {"int","float","char","long","boolean","String","byte[]","String[]","int[]","float[]","char[]","long[]","byte"};
+		//String[] primitive={};
 
 		JSONObject main_json=new JSONObject();
 		for(Integer key : printtypes.keySet())
 		{
 			int flag = 0;
 			String cname = null;
-			List<String> namelist = new ArrayList<String>();
+			ArrayList<String> namelist = new ArrayList<String>();
 			if(printtypes.get(key).size() < MAX_CARDINALITY)
 			{
-				for(Node type_name:printtypes.get(key))
+				Set<Node> prunedValueSet = removeInheritedRetainParentType(printtypes.get(key));
+				for(Node type_name:prunedValueSet)
 				{
 					int isprimitive=0;
 					for(String primitive_type : primitive)
@@ -482,11 +493,12 @@ class SubsequentASTVisitor extends ASTVisitor
 		
 		for(Integer key : printmethods.keySet())
 		{
-			List<String> namelist = new ArrayList<String>();
+			ArrayList<String> namelist = new ArrayList<String>();
 			String mname = null;
 			if(printmethods.get(key).size() < MAX_CARDINALITY)
 			{
-				for(Node method_name : printmethods.get(key))
+				Set<Node> prunedValueSet = removeInheritedRetainParentMethod(printmethods.get(key));
+				for(Node method_name : prunedValueSet)
 				{
 					String nameOfMethod = (String)method_name.getProperty("id");
 					nameOfMethod = JSONObject.quote(nameOfMethod);
@@ -528,6 +540,52 @@ class SubsequentASTVisitor extends ASTVisitor
 		}
 	}
 	
+	private Set<Node> removeInheritedRetainParentType(Set<Node> set) 
+	{
+		Collection<Node> removeSet = new ArrayList<Node>();
+		for(Node parent : set)
+		{
+			for(Node child : set)
+			{
+				if(!parent.equals(child))
+				{
+					if(model.checkIfParentNode(parent, (String)child.getProperty("id"), parentNodeCache))
+						removeSet.add(child);
+				}
+			}
+		}
+		for(Node s : removeSet)
+		{
+			//System.out.println(s.getProperty("id"));
+		}
+		set.removeAll(removeSet);
+		return set;
+	}
+	
+	private Set<Node> removeInheritedRetainParentMethod(Set<Node> set) 
+	{
+		Collection<Node> removeSet = new ArrayList<Node>();
+		for(Node parent : set)
+		{
+			Node pclass = model.getMethodContainer(parent, methodContainerCache);
+			for(Node child : set)
+			{
+				Node cclass = model.getMethodContainer(child, methodContainerCache);
+				if(!pclass.equals(cclass))
+				{
+					if(model.checkIfParentNode(pclass, (String)cclass.getProperty("id"), parentNodeCache))
+						removeSet.add(child);
+				}
+			}
+		}
+		for(Node s : removeSet)
+		{
+			//System.out.println(s.getProperty("id"));
+		}
+		set.removeAll(removeSet);
+		return set;
+	}
+
 	public JSONObject getJson()
 	{
 		if (this.json.get("api_elements") instanceof JSONObject)
@@ -565,12 +623,20 @@ class SubsequentASTVisitor extends ASTVisitor
 			}
 		};
 		TreeSet<JSONObject> set = new TreeSet<JSONObject>(comprator);
-		
-		JSONArray array = (JSONArray) json.get("api_elements");
-		for(int i=0; i<array.length(); i++)
+		//System.out.println(json.toString(2));
+		if(json.get("api_elements") instanceof JSONArray)
 		{
-			JSONObject entry = (JSONObject) array.get(i);
-			set.add(entry);
+			JSONArray array = (JSONArray) json.get("api_elements");
+			for(int i=0; i<array.length(); i++)
+			{
+				JSONObject entry = (JSONObject) array.get(i);
+				set.add(entry);
+			}
+		}
+		else if(json.get("api_elements") instanceof JSONObject)
+		{
+			JSONObject array = (JSONObject) json.get("api_elements");
+			set.add(array);
 		}
 		JSONObject newObj = new JSONObject();
 		for(JSONObject obj : set)

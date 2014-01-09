@@ -52,8 +52,8 @@ class FirstASTVisitor extends ASTVisitor
 	public HashMap<String, ArrayList<Node>> candidateMethodNodesCache;
 	public HashMap<Node, Node> methodContainerCache;
 	public HashMap<Node, Node> methodReturnCache;
-	public HashMap<Node, TreeSet<Node>> methodParameterCache;
-	public HashMap<String, IndexHits<Node>> parentNodeCache;
+	public HashMap<Node, ArrayList<Node>> methodParameterCache;
+	public HashMap<String, ArrayList<Node>> parentNodeCache;
 	
 	public HashMultimap<String, String> localMethods;
 	
@@ -140,8 +140,8 @@ class FirstASTVisitor extends ASTVisitor
 		candidateMethodNodesCache = new HashMap<String, ArrayList<Node>>();
 		methodContainerCache = new HashMap<Node, Node>();
 		methodReturnCache = new HashMap<Node, Node>();
-		methodParameterCache = new HashMap<Node, TreeSet<Node>>();
-		parentNodeCache = new HashMap<String, IndexHits<Node>>();
+		methodParameterCache = new HashMap<Node, ArrayList<Node>>();
+		parentNodeCache = new HashMap<String, ArrayList<Node>>();
 		
 		importList = new HashSet<String>();
 		classNames = new Stack<String>();
@@ -185,7 +185,7 @@ class FirstASTVisitor extends ASTVisitor
 			}
 			if(flagVar1==1)
 				break;
-			else if(name.startsWith("java."))
+			else if(name.startsWith("java.") || name.startsWith("javax."))
 			{
 				if(flagVar2==0)
 				{
@@ -409,7 +409,6 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 		Expression expression = treeNode.getExpression();
 		String treeNodeMethodExactName = treeNode.getName().toString();
 		String treeNodeString = treeNode.toString();
-		//System.out.println("-- "+treeNodeString);
 		int startPosition = treeNode.getName().getStartPosition();
 		String expressionString = null;
 		
@@ -461,7 +460,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 					{
 						candidateMethods.add(node);
 					}
-					ArrayList<Node> candidateSuperClassParents = model.getParents(candidateSuperClass);
+					ArrayList<Node> candidateSuperClassParents = model.getParents(candidateSuperClass, parentNodeCache);
 					for(Node candidateSuperClassParent : candidateSuperClassParents)
 					{
 						//System.out.println("here" + treeNodeString);
@@ -587,6 +586,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 					String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
 					if((candidateMethodExactName).equals(treeNodeMethodExactName))
 					{
+						//System.out.println(candidateMethodNode.getProperty("id"));
 						if(matchParams(candidateMethodNode, treeNode.arguments())==true)
 						{
 							printmethods.put(startPosition, candidateMethodNode);
@@ -598,13 +598,13 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 							{
 								candidateAccumulator.put(scopeArray, retElement);
 							}
-							hasCandidateFlag = 1;
+							//hasCandidateFlag = 1;
 						}
 					}
 				}
 				if(hasCandidateFlag == 0)
 				{
-					ArrayList<Node> parentNodeList = model.getParents(candidateClassNode);
+					ArrayList<Node> parentNodeList = model.getParents(candidateClassNode, parentNodeCache);
 					parentNodeList = getNewClassElementsList(parentNodeList);
 					for(Node parentNode: parentNodeList)
 					{
@@ -824,13 +824,11 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 	private boolean matchParams(Node me, List<ASTNode> params) 
 	{
 		ArrayList<HashSet<String>> nodeArgs = new ArrayList<HashSet<String>>();
-		TreeSet<Node>graphNodes = new TreeSet<Node>(new Comparator<Node>() {
-			public int compare(Node a, Node b)
-			{
-				return (Integer)a.getProperty("paramIndex")-(Integer)b.getProperty("paramIndex");
-			}
-		});
+		ArrayList<Node>graphNodes = new ArrayList<Node>();
 		graphNodes = model.getMethodParams(me, methodParameterCache);
+		
+		//System.out.println("++ " + me.getProperty("id") + " "  + graphNodes.size() + " " + params.size());
+		
 		if(graphNodes.size() != params.size())
 			return false;
 		if(params.size()==0 && graphNodes.size()==0)
@@ -932,6 +930,8 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			}
 			nodeArgs.add(possibleTypes);
 		}
+		
+		
 		Iterator<Node> iter1 = graphNodes.iterator();
 		Iterator<HashSet<String>> iter2 = nodeArgs.iterator();
 		while(iter1.hasNext())
@@ -941,7 +941,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			int flag=0;
 			for(String arg : args)
 			{
-				if(graphParam.getProperty("exactName").equals(arg)== true || graphParam.getProperty("id").equals(arg)==true)
+				if(((String)graphParam.getProperty("exactName")).equals(arg)== true || ((String)graphParam.getProperty("id")).equals(arg)==true)
 				{
 					flag=0;
 					break;
@@ -962,6 +962,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			if(flag==1)
 				return false;
 		}
+		
 		return true;
 		}
 
