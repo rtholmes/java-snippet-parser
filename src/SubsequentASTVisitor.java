@@ -86,7 +86,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		//parentNodeCache = new HashMap<String, ArrayList<Node>>();
 		tolerance = previousVisitor.tolerance;
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;
-		localMethods = previousVisitor.localMethods;
+		localMethods = HashMultimap.create(previousVisitor.localMethods);
 		upDateBasedOnImports();
 	}
 	
@@ -100,22 +100,22 @@ class SubsequentASTVisitor extends ASTVisitor
 		model = previousVisitor.model;
 		cu = previousVisitor.cu;
 		cutype = previousVisitor.cutype;
-		variableTypeMap = previousVisitor.variableTypeMap;
-		methodReturnTypesMap = previousVisitor.methodReturnTypesMap;
-		printtypes = previousVisitor.printtypes;
-		printmethods = previousVisitor.printmethods;
-		printTypesMap = previousVisitor.printTypesMap;
-		printMethodsMap = previousVisitor.printMethodsMap;
-		importList = previousVisitor.importList;
+		variableTypeMap = new HashMap<String, HashMultimap<ArrayList<Integer>,Node>>(previousVisitor.variableTypeMap);
+		methodReturnTypesMap = new HashMap<String, HashMultimap<ArrayList<Integer>,Node>>(previousVisitor.methodReturnTypesMap);
+		printtypes = HashMultimap.create(previousVisitor.printtypes);
+		printmethods = HashMultimap.create(previousVisitor.printmethods);
+		printTypesMap = new HashMap<String, Integer>(previousVisitor.printTypesMap);
+		printMethodsMap = new HashMap<String, Integer>(previousVisitor.printMethodsMap);
+		importList = new HashSet<String>(previousVisitor.importList);
 		classNames = previousVisitor.classNames;
-		superclassname = previousVisitor.superclassname;
-		interfaces = previousVisitor.interfaces;
-		methodContainerCache = previousVisitor.methodContainerCache;
-		methodReturnCache = previousVisitor.methodReturnCache;
+		superclassname = new String(previousVisitor.superclassname);
+		interfaces = new ArrayList<Object>(previousVisitor.interfaces);
+		methodContainerCache = new HashMap<Node, Node>(previousVisitor.methodContainerCache);
+		methodReturnCache = new HashMap<Node, Node>(previousVisitor.methodReturnCache);
 		parentNodeCache = new HashMap<String, ArrayList<Node>>(previousVisitor.parentNodeCache);
 		tolerance = previousVisitor.tolerance;
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;
-		localMethods = previousVisitor.localMethods;
+		localMethods = HashMultimap.create(previousVisitor.localMethods);
 		upDateBasedOnImports();
 	}
 	
@@ -132,6 +132,10 @@ class SubsequentASTVisitor extends ASTVisitor
 			{
 				for(String importItem : importList)
 				{
+					if(importItem.contains(".*"))
+					{
+						importItem = importItem.substring(0, importItem.indexOf(".*"));
+					}
 					if(name.startsWith(importItem) || name.startsWith("java.lang"))
 					{
 						templist.clear();
@@ -144,6 +148,7 @@ class SubsequentASTVisitor extends ASTVisitor
 			if(flagVar1==1)
 				break;
 			else if(name.startsWith("java."))
+			//else if(false)
 			{
 				if(flagVar2==0)
 				{
@@ -435,6 +440,53 @@ class SubsequentASTVisitor extends ASTVisitor
 		}
 	}
 
+	public void removeClustersIfAny()
+	{
+		HashMultimap<Integer, Node> tempprinttypes = HashMultimap.create();
+		HashMultimap<Integer, Node> tempprintmethods = HashMultimap.create();
+		for(Integer key : printtypes.keySet())
+		{
+			Node node = model.returnRightNodeIfCluster(printtypes.get(key));
+			if(node != null)
+			{
+				tempprinttypes.put(key, node);
+			}
+			else
+				tempprinttypes.putAll(key, printtypes.get(key));
+		}
+		for(Integer key : printmethods.keySet())
+		{
+			Set<Node> parentSet = new HashSet<Node>();
+			for(Node method : printmethods.get(key))
+			{
+				Node parent = model.getMethodContainer(method, methodContainerCache);
+				parentSet.add(parent);
+			}
+			Node node = model.returnRightNodeIfCluster(parentSet);
+			if(node != null)
+			{
+				for(Node method : printmethods.get(key))
+				{
+					Node parent = model.getMethodContainer(method, methodContainerCache);
+					if(parent.equals(node))
+					{
+						tempprintmethods.put(key, method);
+					}
+				}
+				if(!tempprintmethods.containsKey(key))
+					tempprintmethods.putAll(key, printmethods.get(key));
+			}
+			else
+			{
+				tempprintmethods.putAll(key, printmethods.get(key));
+			}
+		}
+		
+		printtypes = tempprinttypes;
+		printmethods = tempprintmethods;
+		
+	}
+	
 	public void setJson()
 	{
 		checkForNull();
@@ -444,6 +496,9 @@ class SubsequentASTVisitor extends ASTVisitor
 		//String[] primitive={};
 
 		JSONObject main_json=new JSONObject();
+		
+		
+		removeClustersIfAny();
 		for(Integer key : printtypes.keySet())
 		{
 			int flag = 0;

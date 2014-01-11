@@ -174,18 +174,23 @@ class FirstASTVisitor extends ASTVisitor
 			{
 				for(String importItem : importList)
 				{
+					if(importItem.contains(".*"))
+					{
+						importItem = importItem.substring(0, importItem.indexOf(".*"));
+					}
 					if(name.startsWith(importItem) || name.startsWith("java.lang"))
 					{
 						templist.clear();
 						templist.add(ce);
 						flagVar1 = 1;
-						break;
+						//break;
 					}
 				}
 			}
 			if(flagVar1==1)
 				break;
 			else if(name.startsWith("java.") || name.startsWith("javax."))
+			//else if(false)	
 			{
 				if(flagVar2==0)
 				{

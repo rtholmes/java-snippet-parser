@@ -193,6 +193,7 @@ public class DumpIterator
 				else
 				{
 					String tagString = post.attributeValue("tags");
+					System.out.println(tagString);
 					String[] tags = tagString.split("\\|");
 					String code = post.element("code").getText();
 					String codeid = post.element("code").attributeValue("id");
@@ -459,8 +460,8 @@ public class DumpIterator
 
 
 
-		iterateOver(root, connection, parser, tolerance, max_cardinality, db);
-		//iterate(root, connection, parser, tolerance, max_cardinality, db);
+		//iterateOver(root, connection, parser, tolerance, max_cardinality, db);
+		iterate(root, connection, parser, tolerance, max_cardinality, db);
 
 
 

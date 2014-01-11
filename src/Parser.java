@@ -40,7 +40,7 @@ class Parser{
 		return path;
 	}
 
-	public GraphDatabase getGraph()
+	public GraphDatabase getGraph() throws IOException
 	{
 		try
 		{
