@@ -72,14 +72,14 @@ public class DumpIterator
 				code = code.replace("&amp;", "&");
 				code = code.replace("&quot;", "\"");
 
-				System.out.println(isXMLLike(code)+ "is XML LIKE");
+				//System.out.println(isXMLLike(code)+ "is XML LIKE");
 
 
 				final CompilationUnit cu = parser.getCompilationUnitFromString(code);
-				System.out.println("----- \n" + "Actual Code: \n" );
+				/*System.out.println("----- \n" + "Actual Code: \n" );
 				System.out.println(code);
 				System.out.println("----- \n" + "Generated Compilation Unit: \n" );
-				System.out.println(cu.toString());
+				System.out.println(cu.toString());*/
 				final int cutype = parser.getCuType();
 
 
@@ -124,7 +124,7 @@ public class DumpIterator
 				}
 				if(op!=null)
 				{
-					System.out.println(op.toString(3));;
+					//System.out.println(op.toString(3));;
 					finished++;
 					String q1 = "delete from types where aid = '"+aid+"'";
 					String q2 = "delete from methods where aid = '"+aid+"'";
@@ -182,7 +182,8 @@ public class DumpIterator
 			count++;
 			Element post = i.next();
 			Statement statement = connection.createStatement();
-			if(count>0)
+			//2062 4948 5951 7225 7564 7922 8675 9984 12066 13358 14854 15578
+			if(count> 15578)
 			{
 				String qid = post.attributeValue("qid");
 				String aid = post.attributeValue("aid");
@@ -193,12 +194,11 @@ public class DumpIterator
 				else
 				{
 					String tagString = post.attributeValue("tags");
-					System.out.println(tagString);
+					//System.out.println(tagString);
 					String[] tags = tagString.split("\\|");
 					String code = post.element("code").getText();
 					String codeid = post.element("code").attributeValue("id");
-
-					System.out.println(isXMLLike(code)+ "is XML LIKE");
+					//System.out.println(isXMLLike(code)+ "is XML LIKE");
 					
 					String initcode = code;
 					code = code.replace("&lt;", "<");
@@ -221,12 +221,12 @@ public class DumpIterator
 					if(matchCount<1 )
 					//if(false)
 					{
-						System.out.println("matchcount not exceeded");
+						//System.out.println("matchcount not exceeded");
 					}
 					else
 					{
 						final CompilationUnit cu = parser.getCompilationUnitFromString(code);
-						System.out.println(code);
+						//System.out.println(code);
 						final int cutype = parser.getCuType();
 						if(aid!=null && qid!=null && codeid!=null && initcode!=null)
 						{
@@ -235,8 +235,8 @@ public class DumpIterator
 
 							String other_query2 = "insert into map values('"+aid+"','"+qid+"','"+codeid+"','"+initcode+"','"+cutype+"')";
 							//System.out.println(other_query2);
-							//statement.executeUpdate(other_query1);
-							//statement.executeUpdate(other_query2);
+							statement.executeUpdate(other_query1);
+							statement.executeUpdate(other_query2);
 						}
 						JSONObject op = null;
 						if(cu != null)
@@ -272,7 +272,7 @@ public class DumpIterator
 						}
 						if(op!=null)
 						{
-							System.out.println(op.toString(3));;
+							//System.out.println(op.toString(3));;
 							finished++;
 							String q1 = "delete from types where aid = '"+aid+"'";
 							String q2 = "delete from methods where aid = '"+aid+"'";
@@ -281,7 +281,7 @@ public class DumpIterator
 							if (op.get("api_elements") instanceof JSONObject)
 							{
 								JSONObject apielements = op.getJSONObject("api_elements");
-								//insert(apielements, statement, aid, qid, codeid, code, Integer.toString(cutype));
+								insert(apielements, statement, aid, qid, codeid, code, Integer.toString(cutype));
 							}
 							else if (op.get("api_elements") instanceof JSONArray)
 							{
@@ -289,7 +289,7 @@ public class DumpIterator
 								for(int j=0; j < apielements.length(); j++)
 								{
 									JSONObject obj = (JSONObject) apielements.get(j);
-									//insert(obj, statement, aid, qid, codeid, code, Integer.toString(cutype));
+									insert(obj, statement, aid, qid, codeid, code, Integer.toString(cutype));
 								}
 							}
 						}
@@ -315,12 +315,6 @@ public class DumpIterator
 				}
 			}
 		}
-		//tx0.success();
-		//}
-		//finally
-		//{
-		//	tx0.finish();
-		//}
 	}
 
 	private static void insert(JSONObject obj, Statement statement, String aid, String qid, String codeid, String code, String cutype) throws SQLException 
@@ -455,10 +449,6 @@ public class DumpIterator
 
 		Connection connection = getDatabase("/home/s23subra/workspace/Java Snippet Parser/javadb_rerun.db");
 		Element root = getCodeXML("/home/s23subra/workspace/stackoverflow/java_codes_tags.xml");
-
-
-
-
 
 		//iterateOver(root, connection, parser, tolerance, max_cardinality, db);
 		iterate(root, connection, parser, tolerance, max_cardinality, db);

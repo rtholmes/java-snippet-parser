@@ -26,6 +26,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.neo4j.graphdb.Node;
 
+import sun.reflect.ReflectionFactory.GetReflectionFactoryAction;
+
 class SubsequentASTVisitor extends ASTVisitor
 {
 	public HashMap<Node, Node> methodContainerCache;
@@ -87,14 +89,10 @@ class SubsequentASTVisitor extends ASTVisitor
 		tolerance = previousVisitor.tolerance;
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;
 		localMethods = HashMultimap.create(previousVisitor.localMethods);
+		removeClustersIfAny();
+		updateImports();
 		upDateBasedOnImports();
 	}
-	
-	private static void upDateBasedOnImports()
-	{
-		//Update variableTypeMap to hold only a possible import if one exists. Else leave untouched.
-	}
-	
 	public SubsequentASTVisitor(SubsequentASTVisitor previousVisitor) 
 	{
 		model = previousVisitor.model;
@@ -116,7 +114,92 @@ class SubsequentASTVisitor extends ASTVisitor
 		tolerance = previousVisitor.tolerance;
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;
 		localMethods = HashMultimap.create(previousVisitor.localMethods);
+		removeClustersIfAny();
+		updateImports();
 		upDateBasedOnImports();
+	}
+	
+	public void updateImports()
+	{
+		for(Integer key : printtypes.keySet())
+		{
+			if(printtypes.get(key).size() < tolerance)
+			{
+				Set<Node> temp = printtypes.get(key);
+				for(Node node : temp)
+				{
+					importList.add(getCorrespondingImport((String)node.getProperty("id")));
+				}
+			}
+		}
+		
+		for(Integer key : printmethods.keySet())
+		{
+			HashSet<String> repl = new HashSet<String>();
+			Set<Node> temp = printmethods.get(key);
+			for(Node node : temp)
+			{
+				Node parent = model.getMethodContainer(node, methodContainerCache);
+				repl.add((String) parent.getProperty("id"));
+			}
+			if(repl.size() < tolerance)
+			{
+				importList.addAll(repl);
+			}
+		}
+	}
+	
+	private void upDateBasedOnImports()
+	{
+		//Update variableTypeMap to hold only a possible import if one exists. Else leave untouched.
+		HashMultimap<Integer, Node> tempprinttypes = HashMultimap.create();
+		for(Integer key : printtypes.keySet())
+		{
+			Set<Node> list = printtypes.get(key);
+			HashSet<Node> newList = getNewClassElementsList(list);
+			if(!newList.isEmpty())
+			{
+				tempprinttypes.putAll(key, newList);
+			}
+			else
+			{
+				tempprinttypes.putAll(key, list);
+			}
+		}
+		printtypes = tempprinttypes;
+		
+		
+		HashMultimap<Integer, Node> tempprintmethods = HashMultimap.create();
+		for(Integer key : printmethods.keySet())
+		{
+			Set<Node> list = printmethods.get(key);
+			HashSet<Node> temp = new HashSet<Node>();
+			for(Node method : list)
+			{
+				temp.add(model.getMethodContainer(method, methodContainerCache));
+			}
+			
+			HashSet<Node> replacementList = getNewClassElementsList(temp);
+			
+			HashSet<Node> newList = new HashSet<Node>();
+			for(Node method : list)
+			{
+				if(replacementList.contains(model.getMethodContainer(method, methodContainerCache)))
+				{
+					newList.add(method);
+				}
+			}
+			
+			if(!newList.isEmpty())
+			{
+				tempprintmethods.putAll(key, newList);
+			}
+			else
+			{
+				tempprintmethods.putAll(key, list);
+			}
+		}
+		printmethods = tempprintmethods;
 	}
 	
 	private HashSet<Node> getNewClassElementsList(Set<Node> candidateClassNodes)
@@ -132,23 +215,26 @@ class SubsequentASTVisitor extends ASTVisitor
 			{
 				for(String importItem : importList)
 				{
-					if(importItem.contains(".*"))
+					if(importItem != null)
 					{
-						importItem = importItem.substring(0, importItem.indexOf(".*"));
-					}
-					if(name.startsWith(importItem) || name.startsWith("java.lang"))
-					{
-						templist.clear();
-						templist.add(ce);
-						flagVar1 = 1;
-						break;
+						if(importItem.contains(".*"))
+						{
+							importItem = importItem.substring(0, importItem.indexOf(".*"));
+						}
+						if(name.startsWith(importItem) || name.startsWith("java.lang"))
+						{
+							templist.clear();
+							templist.add(ce);
+							flagVar1 = 1;
+							break;
+						}
 					}
 				}
 			}
 			if(flagVar1==1)
 				break;
-			else if(name.startsWith("java."))
-			//else if(false)
+			//else if(name.startsWith("java."))
+			else if(false)
 			{
 				if(flagVar2==0)
 				{
@@ -498,7 +584,6 @@ class SubsequentASTVisitor extends ASTVisitor
 		JSONObject main_json=new JSONObject();
 		
 		
-		removeClustersIfAny();
 		for(Integer key : printtypes.keySet())
 		{
 			int flag = 0;
@@ -594,29 +679,6 @@ class SubsequentASTVisitor extends ASTVisitor
 			this.json = main_json;
 		}
 	}
-	
-	private Set<Node> removeInheritedRetainParentType(Set<Node> set) 
-	{
-		Collection<Node> removeSet = new ArrayList<Node>();
-		for(Node parent : set)
-		{
-			for(Node child : set)
-			{
-				if(!parent.equals(child))
-				{
-					if(model.checkIfParentNode(parent, (String)child.getProperty("id"), parentNodeCache))
-						removeSet.add(child);
-				}
-			}
-		}
-		for(Node s : removeSet)
-		{
-			//System.out.println(s.getProperty("id"));
-		}
-		set.removeAll(removeSet);
-		return set;
-	}
-	
 	private Set<Node> removeInheritedRetainParentMethod(Set<Node> set) 
 	{
 		Collection<Node> removeSet = new ArrayList<Node>();
@@ -641,6 +703,29 @@ class SubsequentASTVisitor extends ASTVisitor
 		return set;
 	}
 
+	
+	private Set<Node> removeInheritedRetainParentType(Set<Node> set) 
+	{
+		Collection<Node> removeSet = new ArrayList<Node>();
+		for(Node parent : set)
+		{
+			for(Node child : set)
+			{
+				if(!parent.equals(child))
+				{
+					if(model.checkIfParentNode(parent, (String)child.getProperty("id"), parentNodeCache))
+						removeSet.add(child);
+				}
+			}
+		}
+		for(Node s : removeSet)
+		{
+			//System.out.println(s.getProperty("id"));
+		}
+		set.removeAll(removeSet);
+		return set;
+	}
+	
 	public JSONObject getJson()
 	{
 		if (this.json.get("api_elements") instanceof JSONObject)

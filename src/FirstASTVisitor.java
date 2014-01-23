@@ -1,13 +1,11 @@
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
-import java.util.TreeSet;
 
 
 import org.eclipse.jdt.core.dom.ASTVisitor;
@@ -39,7 +37,6 @@ import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.json.JSONObject;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.index.IndexHits;
 
 @SuppressWarnings("unchecked")
 class FirstASTVisitor extends ASTVisitor
@@ -189,8 +186,8 @@ class FirstASTVisitor extends ASTVisitor
 			}
 			if(flagVar1==1)
 				break;
-			else if(name.startsWith("java.") || name.startsWith("javax."))
-			//else if(false)	
+			//else if(name.startsWith("java.") || name.startsWith("javax."))
+			else if(false)	
 			{
 				if(flagVar2==0)
 				{
@@ -236,7 +233,7 @@ class FirstASTVisitor extends ASTVisitor
 		return parentList;
 	}
 
-	public void endVisit(VariableDeclarationStatement treeNode)
+	public boolean visit(VariableDeclarationStatement treeNode)
 	{
 		ArrayList<Integer> variableScopeArray = getScopeArray(treeNode);
 		String treeNodeType = treeNode.getType().toString();
@@ -263,6 +260,7 @@ class FirstASTVisitor extends ASTVisitor
 			candidateClassNodes = getNewClassElementsList(candidateClassNodes);
 			for(Node candidateClass : candidateClassNodes)
 			{
+				//System.out.println(candidateClass.getProperty("id"));
 				candidateAccumulator.put(variableScopeArray, candidateClass);
 				if(candidateClassNodes.size() < tolerance)
 				{
@@ -275,6 +273,7 @@ class FirstASTVisitor extends ASTVisitor
 			}
 			variableTypeMap.put(variableName, candidateAccumulator);
 		}
+		return true;
 	}
 
 	public boolean visit(EnhancedForStatement treeNode)
@@ -591,7 +590,6 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 					String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
 					if((candidateMethodExactName).equals(treeNodeMethodExactName))
 					{
-						//System.out.println(candidateMethodNode.getProperty("id"));
 						if(matchParams(candidateMethodNode, treeNode.arguments())==true)
 						{
 							printmethods.put(startPosition, candidateMethodNode);
@@ -1343,6 +1341,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 				}
 			});
 		}
+		//System.out.println(treeNode.toString()+ treeNode.getParent().getParent().getNodeType());
 		String treeNodeString= treeNode.toString();
 		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
 		int startPosition = treeNode.getType().getStartPosition();
@@ -1371,14 +1370,26 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 				String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
 				if(candidateMethodExactName.equals("<init>"))
 				{
+					//System.out.println("++ : " + candidateMethodNode.getProperty("id"));
 					if(matchParams(candidateMethodNode, treeNode.arguments())==true)
 					{
+						//System.out.println("## : " + candidateMethodNode.getProperty("id"));
+						//System.out.println(candidateClassNode);
 						printtypes.put(startPosition, candidateClassNode);
 						printmethods.put(startPosition, candidateMethodNode);
 						candidateAccumulator.put(scopeArray, candidateClassNode);
 					}
 				}
 			}
+		}
+		if(treeNode.getParent().getNodeType() == 59)
+		{
+			VariableDeclarationFragment lhs = ((VariableDeclarationFragment) treeNode.getParent());
+			
+			HashMultimap<ArrayList<Integer>, Node> tempMap = HashMultimap.create(); 
+			tempMap.putAll(getScopeArray(lhs.getParent()), printtypes.get(startPosition));
+			variableTypeMap.put(lhs.getName().toString(), tempMap);
+			
 		}
 		methodReturnTypesMap.put(treeNodeString, candidateAccumulator);
 		return true;
