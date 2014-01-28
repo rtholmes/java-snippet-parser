@@ -1,7 +1,12 @@
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -32,7 +37,6 @@ import org.json.JSONObject;
 @SuppressWarnings("rawtypes")
 public class DumpIterator
 {
-
 	private static void registerShutdownHook(final GraphDatabase db)
 	{
 		Runtime.getRuntime().addShutdownHook( new Thread()
@@ -182,9 +186,13 @@ public class DumpIterator
 			count++;
 			Element post = i.next();
 			Statement statement = connection.createStatement();
-			//2062 4948 5951 7225 7564 7922 8675 9984 12066 13358 14854 15578
-			if(count> 15578)
+			//2062 4948 5951 7225 7564 7922 8675 9984 12066 13358 14854 15578 17438 20196 21061 22755
+			if(count> 22755)
 			{
+				if(count%1000 == 0)
+				{
+					
+				}
 				String qid = post.attributeValue("qid");
 				String aid = post.attributeValue("aid");
 				if(alreadyParsed.contains(aid) == true)
@@ -258,7 +266,18 @@ public class DumpIterator
 							catch (TimeoutException ex)
 							{
 								//ft.cancel(true);
-								System.out.println("Timed out");
+								String toWrite = aid + ":" + codeid;
+								try 
+								{
+								    PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("timed_out", true)));
+								    out.println(toWrite);
+								    out.close();
+								} 
+								catch (IOException e) 
+								{
+								    
+								}
+								//System.out.println("Timed out: " + toWrite);
 							}
 							catch (InterruptedException e) 
 							{
@@ -309,7 +328,8 @@ public class DumpIterator
 							lruCounter=0;
 							lru = new HashSet<String>();
 						}
-						System.out.println(count+ ":"+ finished + ":"+qid+":"+aid+":"+codeid);
+						//System.out.println(count+ ":"+ finished + ":"+qid+":"+aid+":"+codeid);
+						System.out.println(count);
 					}
 
 				}
@@ -446,10 +466,11 @@ public class DumpIterator
 		{
 			System.out.println("db locked");
 		}
-
+		
 		Connection connection = getDatabase("/home/s23subra/workspace/Java Snippet Parser/javadb_rerun.db");
 		Element root = getCodeXML("/home/s23subra/workspace/stackoverflow/java_codes_tags.xml");
-
+		
+		
 		//iterateOver(root, connection, parser, tolerance, max_cardinality, db);
 		iterate(root, connection, parser, tolerance, max_cardinality, db);
 
