@@ -186,8 +186,8 @@ public class DumpIterator
 			count++;
 			Element post = i.next();
 			Statement statement = connection.createStatement();
-			//2062 4948 5951 7225 7564 7922 8675 9984 12066 13358 14854 15578 17438 20196 21061 22755
-			if(count> 22755)
+			//2062 4948 5951 7225 7564 7922 8675 9984 12066 13358 14854 15578 17438 20196 21061 22755 24219 26848 /27306/<-crashed the ASTParser
+			if(count> 27306)
 			{
 				if(count%1000 == 0)
 				{

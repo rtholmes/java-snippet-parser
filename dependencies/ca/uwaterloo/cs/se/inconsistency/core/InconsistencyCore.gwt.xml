@@ -1,0 +1,12 @@
+<module rename-to='InconsistencyCore'>
+	<!-- <inherits name='com.google.gwt.user.User' /> -->
+	<!-- <source path="model"></source> -->
+	<!-- <source path="model.commands"></source> -->
+	<inherits name='com.google.common.collect.Collect' />
+
+	<source path="model"></source>
+	<source path="partition"></source>
+	<source path="util"></source>
+
+	<source path="src"></source>
+</module>
