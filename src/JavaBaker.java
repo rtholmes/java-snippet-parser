@@ -10,6 +10,7 @@ public class JavaBaker
 {
 	public static void main(String args[]) throws IOException, NullPointerException, ClassNotFoundException, SQLException
 	{
+		//asd
 		long start = System.nanoTime();
 		Logger logger = new Logger();
 		String input_oracle = "/home/s23subra/workspace/model-generator/maven-graph-database/";
