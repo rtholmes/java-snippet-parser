@@ -40,7 +40,7 @@ class SubsequentASTVisitor extends ASTVisitor
 	public HashMap<String, ArrayList<NodeJSON>> candidateMethodNodesCache;
 	public HashMap<NodeJSON, ArrayList<NodeJSON>> methodParameterCache;
 	public HashMap<String, ArrayList<NodeJSON>> parentNodeCache;
-	
+	private HashMap<String, NodeJSON> classIdNodesCache;
 	
 	public GraphServerAccess model;
 	public CompilationUnit cu;
@@ -59,6 +59,7 @@ class SubsequentASTVisitor extends ASTVisitor
 	public int MAX_CARDINALITY;
 	private HashMultimap<String, String> localMethods;
 	private JSONObject json;
+	
 	public void printFields()
 	{
 		System.out.println("methodReturnTypesMap: " + methodReturnTypesMap);
@@ -89,6 +90,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		methodContainerCache = new HashMap<NodeJSON, NodeJSON>(previousVisitor.methodContainerCache);
 		methodReturnCache = new HashMap<NodeJSON, NodeJSON>(previousVisitor.methodReturnCache);
 		parentNodeCache = new HashMap<String, ArrayList<NodeJSON>>(previousVisitor.parentNodeCache);
+		classIdNodesCache = new HashMap<String, NodeJSON>(previousVisitor.classIdNodesCache);
 		//parentNodeCache = new HashMap<String, ArrayList<Node>>();
 		tolerance = previousVisitor.tolerance;
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;

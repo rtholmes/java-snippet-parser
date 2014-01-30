@@ -15,7 +15,6 @@ public class JavaBaker
 {
 	public static void main(String args[]) throws IOException, NullPointerException, ClassNotFoundException, SQLException
 	{
-		//asd
 		long start = System.nanoTime();
 		Logger logger = new Logger();
 		String input_oracle = "http://gadget.cs:7474/db/data";

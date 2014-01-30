@@ -49,7 +49,7 @@ class FirstASTVisitor extends ASTVisitor
 	public GraphServerAccess model;
 	public CompilationUnit cu;
 	public int cutype;
-	
+	public HashMap<String, NodeJSON> classIdNodesCache;
 	public HashMap<String, IndexHits<NodeJSON>> candidateClassNodesCache;
 	public HashMap<String, IndexHits<NodeJSON>> candidateMethodNodesCache;
 	public HashMap<NodeJSON, NodeJSON> methodContainerCache;
@@ -138,6 +138,7 @@ class FirstASTVisitor extends ASTVisitor
 		printMethodsMap = new HashMap<String, Integer>();
 		importList = new HashSet<String>();
 		
+		classIdNodesCache = new HashMap<String, NodeJSON>();
 		candidateClassNodesCache = new HashMap<String, IndexHits<NodeJSON>>();
 		candidateMethodNodesCache = new HashMap<String, IndexHits<NodeJSON>>();
 		methodContainerCache = new HashMap<NodeJSON, NodeJSON>();
@@ -833,7 +834,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 	{
 		ArrayList<HashSet<String>> nodeArgs = new ArrayList<HashSet<String>>();
 		ArrayList<NodeJSON>graphNodes = new ArrayList<NodeJSON>();
-		graphNodes = model.getMethodParams(me, methodParameterCache);
+		graphNodes = model.getMethodParams(me, methodParameterCache, classIdNodesCache);
 		
 		//System.out.println("++ " + me.getProperty("id") + " "  + graphNodes.size() + " " + params.size());
 		
