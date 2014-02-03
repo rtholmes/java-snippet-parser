@@ -267,7 +267,7 @@ class FirstASTVisitor extends ASTVisitor
 				candidateAccumulator = HashMultimap.create();
 			}
 			
-			ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+			ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 			if(!isLocalClass(treeNodeType))
 				candidateClassNodes = model.getCandidateClassNodes(treeNodeType, candidateClassNodesCache);
 			
@@ -306,7 +306,7 @@ class FirstASTVisitor extends ASTVisitor
 		{
 			candidateAccumulator = HashMultimap.create();
 		}
-		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 		if(!isLocalClass(variableType))
 			candidateClassNodes=model.getCandidateClassNodes(variableType, candidateClassNodesCache);
 		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
@@ -379,7 +379,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 				treeNodeType = ((ParameterizedType)treeNode.getType()).getType().toString();
 			else
 				treeNodeType = treeNode.getType().toString();
-			ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+			ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 			if(!isLocalClass(treeNodeType))
 				candidateClassNodes = model.getCandidateClassNodes(treeNodeType, candidateClassNodesCache);
 			candidateClassNodes = getNewClassElementsList(candidateClassNodes);
@@ -478,7 +478,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 				{
 					candidateAccumulator = HashMultimap.create();
 				}
-				ArrayList<NodeJSON> candidateSuperClassNodes = new ArrayList<>();
+				ArrayList<NodeJSON> candidateSuperClassNodes = new ArrayList<NodeJSON>();
 				if(!isLocalClass(superclassname))
 					candidateSuperClassNodes = model.getCandidateClassNodes(superclassname, candidateClassNodesCache);
 				
@@ -687,7 +687,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			}
 			ArrayList <NodeJSON> replacementClassNodesList = new ArrayList<NodeJSON>();
 			
-			ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+			ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 			if(!isLocalClass(expressionString))
 				candidateClassNodes = model.getCandidateClassNodes(expressionString, candidateClassNodesCache);
 			candidateClassNodes = getNewClassElementsList(candidateClassNodes);
@@ -1049,7 +1049,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			else
 				parameterType = param.get(i).getType().toString();
 			
-			ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+			ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 			if(!isLocalClass(parameterType))
 				candidateClassNodes = model.getCandidateClassNodes(parameterType, candidateClassNodesCache);
 			candidateClassNodes = getNewClassElementsList(candidateClassNodes);
@@ -1073,7 +1073,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 
 		if(superclassname!=null)
 		{
-			ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+			ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 			if(!isLocalClass(superclassname))
 				candidateClassNodes = model.getCandidateClassNodes(superclassname, candidateClassNodesCache);
 			candidateClassNodes = getNewClassElementsList(candidateClassNodes);
@@ -1109,7 +1109,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 		{
 			for(int i=0;i<interfaces.size();i++)
 			{
-				ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+				ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 				if(!isLocalClass(interfaces.get(i).toString()))
 					candidateClassNodes = model.getCandidateClassNodes(interfaces.get(i).toString(), candidateClassNodesCache);
 				candidateClassNodes = getNewClassElementsList(candidateClassNodes);
@@ -1159,7 +1159,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			candidateAccumulator = HashMultimap.create();
 		}
 		int startPosition = treeNode.getStartPosition();
-		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 		if(!isLocalClass(classNames.peek()))
 			candidateClassNodes = model.getCandidateClassNodes(classNames.peek(), candidateClassNodesCache);
 		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
@@ -1213,7 +1213,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			temporaryMap = HashMultimap.create();
 		}
 		//System.out.println("catch inv 1");
-		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 		if(!isLocalClass(node.getException().getType().toString()))
 			candidateClassNodes = model.getCandidateClassNodes(node.getException().getType().toString(), candidateClassNodesCache);
 		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
@@ -1249,7 +1249,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 		{
 			candidateAccumulator = HashMultimap.create();
 		}
-		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 		if(!isLocalClass(superclassname))
 			candidateClassNodes = model.getCandidateClassNodes(superclassname, candidateClassNodesCache);
 		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
@@ -1302,7 +1302,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			candidateAccumulator = HashMultimap.create();
 		}
 		String treeNodeName = treeNode.getName().toString();
-		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 		if(!isLocalClass(superclassname))
 			candidateClassNodes = model.getCandidateClassNodes(superclassname, candidateClassNodesCache);
 		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
@@ -1354,7 +1354,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 				{
 					String methodDeclarationName = md.getName().toString();
 					int startPosition = md.getStartPosition();
-					ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+					ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 					if(!isLocalClass(treeNode.getType().toString()))
 						candidateClassNodes = model.getCandidateClassNodes(treeNode.getType().toString(), candidateClassNodesCache);
 					candidateClassNodes = getNewClassElementsList(candidateClassNodes);
@@ -1394,7 +1394,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 		int startPosition = treeNode.getType().getStartPosition();
 		printMethodsMap.put(treeNodeString, startPosition);
 		printTypesMap.put(treeNodeString, startPosition);
-		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 		if(!isLocalClass(treeNode.getType().toString()))
 			candidateClassNodes = model.getCandidateClassNodes(treeNode.getType().toString(), candidateClassNodesCache);
 		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
@@ -1477,7 +1477,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 
 	public boolean visit(CastExpression node)
 	{
-		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<>();
+		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 		if(!isLocalClass(node.getType().toString()))
 			candidateClassNodes = model.getCandidateClassNodes(node.getType().toString(), candidateClassNodesCache);
 		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
