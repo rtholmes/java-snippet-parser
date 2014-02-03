@@ -3,6 +3,8 @@
 	<name>Java Snippet Parser</name>
 	<comment></comment>
 	<projects>
+		<project>ca.uwaterloo.cs.se.inconsistency.core</project>
+		<project>model-generator</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
@@ -18,7 +20,7 @@
 		<link>
 			<name>src/JavaBaker.java</name>
 			<type>1</type>
-			<location>/home/s23subra/workspace/Java Snippet Parser/src/JavaBaker.java</location>
+			<location>/home/siddharth/workspace/Java Snippet Parser/src/JavaBaker.java</location>
 		</link>
 	</linkedResources>
 </projectDescription>
