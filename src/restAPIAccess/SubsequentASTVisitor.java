@@ -15,6 +15,7 @@ import java.util.TreeSet;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 
 
+import Node.IndexHits;
 import Node.NodeJSON;
 import RestAPI.GraphServerAccess;
 
@@ -41,6 +42,7 @@ class SubsequentASTVisitor extends ASTVisitor
 	public HashMap<NodeJSON, ArrayList<NodeJSON>> methodParameterCache;
 	public HashMap<String, ArrayList<NodeJSON>> parentNodeCache;
 	private HashMap<String, NodeJSON> classIdNodesCache;
+	private HashMap<String, ArrayList<ArrayList<NodeJSON>>> shortClassShortMethodCache;
 	
 	public GraphServerAccess model;
 	public CompilationUnit cu;
@@ -58,7 +60,9 @@ class SubsequentASTVisitor extends ASTVisitor
 	public int tolerance;
 	public int MAX_CARDINALITY;
 	private HashMultimap<String, String> localMethods;
+	private HashSet<String> localClasses;
 	private JSONObject json;
+	
 	
 	public void printFields()
 	{
@@ -95,6 +99,8 @@ class SubsequentASTVisitor extends ASTVisitor
 		tolerance = previousVisitor.tolerance;
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;
 		localMethods = HashMultimap.create(previousVisitor.localMethods);
+		localClasses = new HashSet<String>(previousVisitor.localClasses);
+		shortClassShortMethodCache = new HashMap<String, ArrayList<ArrayList<NodeJSON>>>(previousVisitor.shortClassShortMethodCache);
 		removeClustersIfAny();
 		updateImports();
 		upDateBasedOnImports();
@@ -117,9 +123,11 @@ class SubsequentASTVisitor extends ASTVisitor
 		methodContainerCache = new HashMap<NodeJSON, NodeJSON>(previousVisitor.methodContainerCache);
 		methodReturnCache = new HashMap<NodeJSON, NodeJSON>(previousVisitor.methodReturnCache);
 		parentNodeCache = new HashMap<String, ArrayList<NodeJSON>>(previousVisitor.parentNodeCache);
+		shortClassShortMethodCache = new HashMap<String, ArrayList<ArrayList<NodeJSON>>>(previousVisitor.shortClassShortMethodCache);
 		tolerance = previousVisitor.tolerance;
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;
 		localMethods = HashMultimap.create(previousVisitor.localMethods);
+		localClasses = new HashSet<String>(previousVisitor.localClasses);
 		removeClustersIfAny();
 		updateImports();
 		upDateBasedOnImports();
