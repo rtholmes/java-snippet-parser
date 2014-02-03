@@ -28,8 +28,8 @@ class Parser{
 	public Parser(String oracle, String input_file_path) throws IOException 
 	{
 		String path = getPath();
-		this.input_file = path + File.separator + input_file_path;
-		this.input_oracle = oracle;
+		input_file = path + File.separator + input_file_path;
+		input_oracle = oracle;
 	}
 
 	private String getPath() throws IOException 
@@ -48,7 +48,7 @@ class Parser{
 	{
 		try
 		{
-			GraphServerAccess graphServer = new GraphServerAccess(this.input_oracle);
+			GraphServerAccess graphServer = new GraphServerAccess(input_oracle);
 			return graphServer;
 		}
 		catch(StoreLockException e)
@@ -70,7 +70,7 @@ class Parser{
 
 	private String getCodefromSnippet() throws IOException 
 	{
-		BufferedReader br = new BufferedReader(new FileReader(this.input_file));
+		BufferedReader br = new BufferedReader(new FileReader(input_file));
 		StringBuilder codeBuilder = new StringBuilder();
 		String codeText = null;
 		try 
