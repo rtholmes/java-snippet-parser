@@ -39,11 +39,10 @@ public class JavaBaker
 
 	static JSONObject vistAST(GraphServerAccess db, CompilationUnit cu, int cutype, int tolerance, int max_cardinality)
 	{
-		
 		FirstASTVisitor first_visitor = new FirstASTVisitor(db,cu,cutype, tolerance, max_cardinality);
 		cu.accept(first_visitor);
-		//System.out.println(first_visitor.printJson().toString(3));
-		//first_visitor.printFields();
+		System.out.println(first_visitor.printJson().toString(3));
+		first_visitor.printFields();
 
 		SubsequentASTVisitor second_visitor = new SubsequentASTVisitor(first_visitor);
 		cu.accept(second_visitor);

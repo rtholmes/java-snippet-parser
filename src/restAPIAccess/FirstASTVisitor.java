@@ -49,7 +49,6 @@ class FirstASTVisitor extends ASTVisitor
 	public GraphServerAccess model;
 	public CompilationUnit cu;
 	public int cutype;
-	public HashMap<String, NodeJSON> classIdNodesCache;
 	public HashMap<String, IndexHits<NodeJSON>> candidateClassNodesCache;
 	public HashMap<String, IndexHits<NodeJSON>> candidateMethodNodesCache;
 	public HashMap<NodeJSON, NodeJSON> methodContainerCache;
@@ -143,7 +142,6 @@ class FirstASTVisitor extends ASTVisitor
 		printMethodsMap = new HashMap<String, Integer>();
 		importList = new HashSet<String>();
 
-		classIdNodesCache = new HashMap<String, NodeJSON>();
 		candidateClassNodesCache = new HashMap<String, IndexHits<NodeJSON>>();
 		candidateMethodNodesCache = new HashMap<String, IndexHits<NodeJSON>>();
 		methodContainerCache = new HashMap<NodeJSON, NodeJSON>();
@@ -233,7 +231,7 @@ class FirstASTVisitor extends ASTVisitor
 	{
 		ASTNode parentNode;
 		ArrayList<Integer> parentList = new ArrayList<Integer>();
-		while((parentNode =treeNode.getParent())!=null)
+		while((parentNode = treeNode.getParent())!=null)
 		{
 			//do not include parenthesised type nodes in the list.
 			if(parentNode.getNodeType() != 36)
@@ -251,8 +249,12 @@ class FirstASTVisitor extends ASTVisitor
 		String treeNodeType = treeNode.getType().toString();
 		if(treeNode.getType().getNodeType() == 74)
 			treeNodeType = ((ParameterizedType)treeNode.getType()).getType().toString();
-		//System.out.println(" +++ "+treeNodeJSON.getType().getNodeJSONType() + " : " + treeNodeJSONType);
-
+		
+		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
+		if(!isLocalClass(treeNodeType))
+			candidateClassNodes = model.getCandidateClassNodes(treeNodeType, candidateClassNodesCache);
+		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
+		
 		for(int j=0; j < treeNode.fragments().size(); j++)
 		{
 			HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator = null;
@@ -267,14 +269,8 @@ class FirstASTVisitor extends ASTVisitor
 				candidateAccumulator = HashMultimap.create();
 			}
 
-			ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
-			if(!isLocalClass(treeNodeType))
-				candidateClassNodes = model.getCandidateClassNodes(treeNodeType, candidateClassNodesCache);
-
-			candidateClassNodes = getNewClassElementsList(candidateClassNodes);
 			for(NodeJSON candidateClass : candidateClassNodes)
 			{
-				//System.out.println(candidateClass.getProperty("id"));
 				candidateAccumulator.put(variableScopeArray, candidateClass);
 				if(candidateClassNodes.size() < tolerance)
 				{
@@ -360,6 +356,17 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 	public void endVisit(FieldDeclaration treeNode) 
 	{
 		int startPosition = treeNode.getType().getStartPosition();
+
+		String treeNodeType = null;
+		if(treeNode.getType().getNodeType()==74)
+			treeNodeType = ((ParameterizedType)treeNode.getType()).getType().toString();
+		else
+			treeNodeType = treeNode.getType().toString();
+		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
+		if(!isLocalClass(treeNodeType))
+			candidateClassNodes = model.getCandidateClassNodes(treeNodeType, candidateClassNodesCache);
+		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
+		
 		for(int j=0; j < treeNode.fragments().size(); j++)
 		{
 			String fieldName = ((VariableDeclarationFragment)treeNode.fragments().get(j)).getName().toString();
@@ -374,15 +381,6 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 				candidateAccumulator = HashMultimap.create();
 			}
 
-			String treeNodeType = null;
-			if(treeNode.getType().getNodeType()==74)
-				treeNodeType = ((ParameterizedType)treeNode.getType()).getType().toString();
-			else
-				treeNodeType = treeNode.getType().toString();
-			ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
-			if(!isLocalClass(treeNodeType))
-				candidateClassNodes = model.getCandidateClassNodes(treeNodeType, candidateClassNodesCache);
-			candidateClassNodes = getNewClassElementsList(candidateClassNodes);
 			for(NodeJSON candidateClass : candidateClassNodes)
 			{
 				candidateAccumulator.put(variableScopeArray, candidateClass);
@@ -453,15 +451,12 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			expressionString = expression.toString();
 			if(expressionString.startsWith("(") && expressionString.endsWith(")"))
 			{
-
 				expressionString = expressionString.substring(1, expressionString.length()-1);
-				//System.out.println(expressionString + " !!!!!");
 			}
 		}
 
 		if(expression==null)
 		{
-			//System.out.println("Here "+ treeNodeString);
 			if(superclassname.isEmpty() == false)
 			{	
 				/*
@@ -694,7 +689,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			
 			if(!isLocalClass(expressionString))
 			{
-				ArrayList<ArrayList<NodeJSON>> tempArrayList = model.getMethodNodeWithShortClass(treeNodeMethodExactName, expressionString, shortClassShortMethodCache,methodReturnCache, methodContainerCache);
+				ArrayList<ArrayList<NodeJSON>> tempArrayList = model.getMethodNodeWithShortClass(treeNodeMethodExactName, expressionString, shortClassShortMethodCache, methodReturnCache, methodContainerCache);
 				candidateClassNodes = tempArrayList.get(0);
 				candidateMethodNodes = tempArrayList.get(1);
 				candidateReturnNodes = tempArrayList.get(2);
@@ -724,8 +719,8 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 					printtypes.replaceValues(printTypesMap.get(expressionString), getNewClassElementsList(replacementClassNodesList));
 				}
 			}
-
 		}
+		
 		else if(methodReturnTypesMap.containsKey(expressionString))
 		{
 			printTypesMap.put(treeNodeString, startPosition);
@@ -859,8 +854,9 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 	private boolean matchParams(NodeJSON me, List<ASTNode> params) 
 	{
 		ArrayList<HashSet<String>> nodeArgs = new ArrayList<HashSet<String>>();
-		ArrayList<NodeJSON>graphNodes = new ArrayList<NodeJSON>();
-		graphNodes = model.getMethodParams(me, methodParameterCache, classIdNodesCache);
+		ArrayList<NodeJSON> graphNodes = new ArrayList<NodeJSON>();
+		//if(graphNodes == null)
+		graphNodes = model.getMethodParams(me, methodParameterCache);
 
 		//System.out.println("++ " + me.getProperty("id") + " "  + graphNodes.size() + " " + params.size());
 
@@ -976,7 +972,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			int flag=0;
 			for(String arg : args)
 			{
-				if(((String)graphParam.getProperty("exactName")).equals(arg)== true || ((String)graphParam.getProperty("id")).equals(arg)==true)
+				if(((String)graphParam.getProperty("exactName")).equals(arg) || ((String)graphParam.getProperty("id")).equals(arg))
 				{
 					flag=0;
 					break;
@@ -986,11 +982,11 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 					flag=0;
 					break;
 				}
-				else if(model.checkIfParentNode(graphParam, arg, parentNodeCache))
+				/*else if(model.checkIfParentNode(graphParam, arg, parentNodeCache))
 				{
 					flag=0;
 					break;
-				}
+				}*/
 				else
 					flag=1;
 			}

@@ -6,7 +6,6 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
@@ -15,7 +14,6 @@ import java.util.TreeSet;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 
 
-import Node.IndexHits;
 import Node.NodeJSON;
 import RestAPI.GraphServerAccess;
 
@@ -31,8 +29,6 @@ import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import sun.reflect.ReflectionFactory.GetReflectionFactoryAction;
-
 class SubsequentASTVisitor extends ASTVisitor
 {
 	public HashMap<NodeJSON, NodeJSON> methodContainerCache;
@@ -41,7 +37,6 @@ class SubsequentASTVisitor extends ASTVisitor
 	public HashMap<String, ArrayList<NodeJSON>> candidateMethodNodesCache;
 	public HashMap<NodeJSON, ArrayList<NodeJSON>> methodParameterCache;
 	public HashMap<String, ArrayList<NodeJSON>> parentNodeCache;
-	private HashMap<String, NodeJSON> classIdNodesCache;
 	private HashMap<String, ArrayList<ArrayList<NodeJSON>>> shortClassShortMethodCache;
 	
 	public GraphServerAccess model;
@@ -94,8 +89,6 @@ class SubsequentASTVisitor extends ASTVisitor
 		methodContainerCache = new HashMap<NodeJSON, NodeJSON>(previousVisitor.methodContainerCache);
 		methodReturnCache = new HashMap<NodeJSON, NodeJSON>(previousVisitor.methodReturnCache);
 		parentNodeCache = new HashMap<String, ArrayList<NodeJSON>>(previousVisitor.parentNodeCache);
-		classIdNodesCache = new HashMap<String, NodeJSON>(previousVisitor.classIdNodesCache);
-		//parentNodeCache = new HashMap<String, ArrayList<Node>>();
 		tolerance = previousVisitor.tolerance;
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;
 		localMethods = HashMultimap.create(previousVisitor.localMethods);
@@ -198,7 +191,7 @@ class SubsequentASTVisitor extends ASTVisitor
 			HashSet<NodeJSON> newList = new HashSet<NodeJSON>();
 			for(NodeJSON method : list)
 			{
-				if(replacementList.contains(model.getMethodContainer(method, methodContainerCache)))
+				if( contains(replacementList, model.getMethodContainer(method, methodContainerCache)) )
 				{
 					newList.add(method);
 				}
@@ -306,7 +299,7 @@ class SubsequentASTVisitor extends ASTVisitor
 			for(NodeJSON method : currentMethods)
 			{
 				NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
-				if(candidateReturnNodes.contains(returnNode) == true)
+				if(contains(candidateReturnNodes, returnNode) == true)
 				{
 					newMethodNodes.add(method);
 					newReturnNodes.add(returnNode);
@@ -348,12 +341,16 @@ class SubsequentASTVisitor extends ASTVisitor
 			Set<NodeJSON> newClassNodes = new HashSet<NodeJSON>();
 			for(NodeJSON method : currentMethods)
 			{
-				//System.out.println("here--");
+				System.out.println("here--");
 				NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
 				NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
-				if(candidateClassNodes.contains(parentNode) == true && candidateReturnNodes.contains(returnNode) == true)
+				System.out.println(parentNode);
+				System.out.println(candidateClassNodes);
+				System.out.println(contains(candidateClassNodes, parentNode));
+				System.out.println(contains(candidateReturnNodes, returnNode));
+				if(contains(candidateClassNodes,parentNode) == true && contains(candidateReturnNodes, returnNode) == true)
 				{
-					//System.out.println("here too -----");
+					System.out.println("here too -----" + method.getProperty("id"));
 					newMethodNodes.add(method);
 					newReturnNodes.add(returnNode);
 					newClassNodes.add(parentNode);
@@ -408,7 +405,7 @@ class SubsequentASTVisitor extends ASTVisitor
 				//System.out.println("here -- ");
 				NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
 				NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
-				if(candidateClassNodes.contains(parentNode) == true && candidateReturnNodes.contains(returnNode) == true)
+				if(contains(candidateClassNodes, parentNode) == true && contains(candidateReturnNodes, returnNode) == true)
 				{
 					//System.out.println("-- here too");
 					newMethodNodes.add(method);
@@ -432,6 +429,22 @@ class SubsequentASTVisitor extends ASTVisitor
 			temporaryMap2.removeAll(rightScopeArray2);
 			temporaryMap2.putAll(rightScopeArray2, newReturnNodes);
 		}
+	}
+
+	private boolean contains(Set<NodeJSON> candidateNodes, NodeJSON returnNode) 
+	{
+		String id = returnNode.getProperty("id");
+		System.out.println("++ " + id);
+		for(NodeJSON node : candidateNodes)
+		{
+			System.out.println(node.getProperty("id"));
+			if(node.getProperty("id").equals(id))
+			{
+				System.out.println("yes bitch");
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private String getCorrespondingImport(String classID) 
@@ -480,7 +493,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		for(NodeJSON method : currentMethods)
 		{
 			NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
-			if(candidateReturnNodes.contains(returnNode) == true)
+			if(contains(candidateReturnNodes, returnNode) == true)
 			{
 				newMethodNodes.add(method);
 			}
@@ -504,7 +517,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		for(NodeJSON method : currentMethods)
 		{
 			NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
-			if(candidateReturnNodes.contains(returnNode) == true)
+			if(contains(candidateReturnNodes, returnNode) == true)
 			{
 				newMethodNodes.add(method);
 			}
@@ -530,7 +543,7 @@ class SubsequentASTVisitor extends ASTVisitor
 			for(NodeJSON method : currentMethods)
 			{
 				NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
-				if(candidateReturnNodes.contains(returnNode) == true)
+				if(contains(candidateReturnNodes, returnNode) == true)
 				{
 					newMethodNodes.add(method);
 				}
