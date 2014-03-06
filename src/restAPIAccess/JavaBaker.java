@@ -34,6 +34,7 @@ public class JavaBaker
 		
 		long end = System.nanoTime();
 		logger.printAccessTime("JavaBaker total run: ", " ", end, start);
+		graphServer.logger.printMap();
 	}
 
 
