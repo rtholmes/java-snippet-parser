@@ -187,7 +187,7 @@ public class DumpIterator
 			Element post = i.next();
 			Statement statement = connection.createStatement();
 			//2062 4948 5951 7225 7564 7922 8675 9984 12066 13358 14854 15578 17438 20196 21061 22755 24219 26848 /27306/<-crashed the ASTParser
-			if(count> 27306)
+			if(count> 29556)
 			{
 				if(count%1000 == 0)
 				{
@@ -329,7 +329,8 @@ public class DumpIterator
 							lru = new HashSet<String>();
 						}
 						//System.out.println(count+ ":"+ finished + ":"+qid+":"+aid+":"+codeid);
-						System.out.println(count);
+						if(count%100 == 0)
+							System.out.println(count);
 					}
 
 				}
