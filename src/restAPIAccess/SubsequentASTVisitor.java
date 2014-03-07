@@ -1,5 +1,6 @@
 package restAPIAccess;
 
+
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -20,12 +21,14 @@ import RestAPI.GraphServerAccess;
 import com.google.common.collect.HashMultimap;
 
 import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.SuperConstructorInvocation;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -98,6 +101,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		updateImports();
 		upDateBasedOnImports();
 	}
+	
 	public SubsequentASTVisitor(SubsequentASTVisitor previousVisitor) 
 	{
 		model = previousVisitor.model;
@@ -277,17 +281,67 @@ class SubsequentASTVisitor extends ASTVisitor
 		return false;
 	}
 
+	
+	public void endVisit(VariableDeclarationFragment treeNode)
+	{
+		/*
+		String vname = treeNode.getName().toString();
+		int startPosition = treeNode.getParent().getStartPosition();
+		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
+		HashMultimap<ArrayList<Integer>, NodeJSON> temporaryMap = variableTypeMap.get(vname);
+		if(temporaryMap == null)
+			return;
+		Set<NodeJSON> candidateClassNodes;
+		ArrayList<Integer> rightScopeArray1 = getNodeSet(temporaryMap, scopeArray);
+		if(rightScopeArray1 == null)
+		{
+			candidateClassNodes = new HashSet<NodeJSON>();
+		}
+		else
+		{
+			candidateClassNodes = temporaryMap.get(rightScopeArray1);
+		}
+		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
+		Set<NodeJSON> currentTypes = printtypes.get(startPosition);
+		System.out.println("yeah " + vname + currentTypes.size());
+		Set<NodeJSON> newClassNodes = new HashSet<NodeJSON>();
+		for(NodeJSON type : currentTypes)
+		{
+			if(contains(candidateClassNodes,type) == true)
+			{
+				newClassNodes.add(type);
+			}
+		}
+		
+		if(newClassNodes.size() < tolerance)
+		{
+			for(NodeJSON newClassNode : newClassNodes)
+			{
+				String possibleImport = getCorrespondingImport(newClassNode.getProperty("id").toString());
+				if(possibleImport!=null)
+				{
+					importList.add(possibleImport);
+				}
+			}
+		}
+		
+		temporaryMap.replaceValues(rightScopeArray1, newClassNodes);
+		printtypes.putAll(startPosition, newClassNodes);
+		 */
+	}
+	
 	public void endVisit(MethodInvocation treeNode)
 	{
 		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
-		Expression expression=treeNode.getExpression();
+		Expression expression = treeNode.getExpression();
 		String treeNodeString = treeNode.toString();
 		int startPosition = treeNode.getName().getStartPosition();
-		if(expression==null)
+		if(expression == null)
 		{
 			HashMultimap<ArrayList<Integer>, NodeJSON> temporaryMap2 = methodReturnTypesMap.get(treeNodeString);
 			if(temporaryMap2 == null)
 				return;
+
 			ArrayList<Integer> rightScopeArray2 = getNodeSet(temporaryMap2, scopeArray);
 			if(rightScopeArray2 == null)
 				return;
@@ -322,18 +376,30 @@ class SubsequentASTVisitor extends ASTVisitor
 			HashMultimap<ArrayList<Integer>, NodeJSON> temporaryMap1 = variableTypeMap.get(expression.toString());
 			if(temporaryMap1 == null)
 				return;
+			Set<NodeJSON> candidateClassNodes;
 			ArrayList<Integer> rightScopeArray1 = getNodeSet(temporaryMap1, scopeArray);
 			if(rightScopeArray1 == null)
-				return;
-			Set<NodeJSON> candidateClassNodes = temporaryMap1.get(rightScopeArray1);
+			{
+				candidateClassNodes = new HashSet<NodeJSON>();
+			}
+			else
+			{
+				candidateClassNodes = temporaryMap1.get(rightScopeArray1);
+			}
 			candidateClassNodes = getNewClassElementsList(candidateClassNodes);
 			HashMultimap<ArrayList<Integer>, NodeJSON> temporaryMap2 = methodReturnTypesMap.get(treeNodeString);
 			if(temporaryMap2 == null)
 				return;
 			ArrayList<Integer> rightScopeArray2 = getNodeSet(temporaryMap2, scopeArray);
+			Set<NodeJSON> candidateReturnNodes;
 			if(rightScopeArray2 == null)
-				return;
-			Set<NodeJSON> candidateReturnNodes = temporaryMap2.get(rightScopeArray2);
+			{
+				candidateReturnNodes = new HashSet<NodeJSON>();
+			}
+			else
+			{
+				candidateReturnNodes = temporaryMap2.get(rightScopeArray2);
+			}
 			Set<NodeJSON> currentMethods = printmethods.get(startPosition);
 			
 			Set<NodeJSON> newMethodNodes = new HashSet<NodeJSON>();
@@ -341,16 +407,10 @@ class SubsequentASTVisitor extends ASTVisitor
 			Set<NodeJSON> newClassNodes = new HashSet<NodeJSON>();
 			for(NodeJSON method : currentMethods)
 			{
-				System.out.println("here--");
 				NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
 				NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
-				System.out.println(parentNode);
-				System.out.println(candidateClassNodes);
-				System.out.println(contains(candidateClassNodes, parentNode));
-				System.out.println(contains(candidateReturnNodes, returnNode));
 				if(contains(candidateClassNodes,parentNode) == true && contains(candidateReturnNodes, returnNode) == true)
 				{
-					System.out.println("here too -----" + method.getProperty("id"));
 					newMethodNodes.add(method);
 					newReturnNodes.add(returnNode);
 					newClassNodes.add(parentNode);
@@ -368,12 +428,13 @@ class SubsequentASTVisitor extends ASTVisitor
 					}
 				}
 			}
-			temporaryMap1.removeAll(rightScopeArray1);
-			temporaryMap1.putAll(rightScopeArray1, newClassNodes);
+			
+			temporaryMap1.replaceValues(rightScopeArray1, newClassNodes);
+			variableTypeMap.put(expression.toString(), temporaryMap1);
+			temporaryMap2.replaceValues(rightScopeArray2, newReturnNodes);
+			methodReturnTypesMap.put(treeNodeString, temporaryMap2);
 			printmethods.removeAll(startPosition);
 			printmethods.putAll(startPosition, newMethodNodes);
-			temporaryMap2.removeAll(rightScopeArray2);
-			temporaryMap2.putAll(rightScopeArray2, newReturnNodes);
 		}
 		else if(methodReturnTypesMap.containsKey(expression.toString()))
 		{
@@ -393,21 +454,17 @@ class SubsequentASTVisitor extends ASTVisitor
 			if(rightScopeArray2 == null)
 				return;
 			Set<NodeJSON> candidateReturnNodes = temporaryMap2.get(rightScopeArray2);
-			//System.out.println("candidateReturnNodes " + scopeArray + candidateReturnNodes);
 			Set<NodeJSON> currentMethods = printmethods.get(startPosition);
-			//System.out.println("currentMethods " + currentMethods);
 			Set<NodeJSON> newMethodNodes = new HashSet<NodeJSON>();
 			Set<NodeJSON> newReturnNodes = new HashSet<NodeJSON>();
 			Set<NodeJSON> newClassNodes = new HashSet<NodeJSON>();
 			
 			for(NodeJSON method : currentMethods)
 			{
-				//System.out.println("here -- ");
 				NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
 				NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
 				if(contains(candidateClassNodes, parentNode) == true && contains(candidateReturnNodes, returnNode) == true)
 				{
-					//System.out.println("-- here too");
 					newMethodNodes.add(method);
 					newReturnNodes.add(returnNode);
 					newClassNodes.add(parentNode);
@@ -434,13 +491,10 @@ class SubsequentASTVisitor extends ASTVisitor
 	private boolean contains(Set<NodeJSON> candidateNodes, NodeJSON returnNode) 
 	{
 		String id = returnNode.getProperty("id");
-		System.out.println("++ " + id);
 		for(NodeJSON node : candidateNodes)
 		{
-			System.out.println(node.getProperty("id"));
 			if(node.getProperty("id").equals(id))
 			{
-				System.out.println("yes bitch");
 				return true;
 			}
 		}
@@ -479,7 +533,8 @@ class SubsequentASTVisitor extends ASTVisitor
 	}
 
 	public void endVisit(ConstructorInvocation treeNode)
-	{	
+	{
+		/*
 		String treeNodeString = treeNode.toString();
 		int startPosition = treeNode.getStartPosition();
 		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
@@ -500,6 +555,71 @@ class SubsequentASTVisitor extends ASTVisitor
 		}
 		printmethods.removeAll(startPosition);
 		printmethods.putAll(startPosition, newMethodNodes);
+		 */
+	}
+	
+	public void endVisit(ClassInstanceCreation treeNode)
+	{
+		if(treeNode.getParent().getNodeType() == 59)
+		{
+			int startPosition = treeNode.getType().getStartPosition();
+			
+			VariableDeclarationFragment lhs = ((VariableDeclarationFragment) treeNode.getParent());
+			
+			HashMultimap<ArrayList<Integer>, NodeJSON> tempMap; 
+			Set<NodeJSON> candidateClassNodes = new HashSet<NodeJSON>();
+			
+			tempMap = variableTypeMap.get(lhs.getName().toString());
+			if(tempMap != null)
+			{
+				if(!tempMap.keySet().isEmpty())
+				{
+					ArrayList<Integer> scopeArray = getScopeArray(treeNode.getParent());
+					ArrayList<Integer> rightScopeArray = getNodeSet(tempMap, scopeArray);
+					candidateClassNodes = tempMap.get(rightScopeArray);
+				}
+			}
+			
+			
+			tempMap.putAll(getScopeArray(lhs.getParent()), printtypes.get(startPosition));
+			Set<NodeJSON> currentClassNodes = printtypes.get(startPosition);
+			Set<NodeJSON> currentMethodNodes = printmethods.get(startPosition);
+			currentClassNodes = getNewClassElementsList(currentClassNodes);
+			Set<NodeJSON> newClassNodes = new HashSet<NodeJSON>();
+			
+			for(NodeJSON type : currentClassNodes)
+			{
+				if(contains(candidateClassNodes,type) == true)
+				{
+					newClassNodes.add(type);
+				}
+			}
+			
+			if(newClassNodes.size() < tolerance)
+			{
+				for(NodeJSON newClassNode : newClassNodes)
+				{
+					String possibleImport = getCorrespondingImport(newClassNode.getProperty("id").toString());
+					if(possibleImport!=null)
+					{
+						importList.add(possibleImport);
+					}
+				}
+			}
+			
+			Set<NodeJSON> newMethodNodes = new HashSet<NodeJSON>();
+			for(NodeJSON method : currentMethodNodes)
+			{
+				NodeJSON parent = model.getMethodContainer(method, methodContainerCache);
+				if(contains(candidateClassNodes, parent))
+				{
+					newMethodNodes.add(method);
+				}
+			}
+			
+			printtypes.replaceValues(startPosition, newClassNodes);
+			printmethods.replaceValues(startPosition, newMethodNodes);
+		}
 	}
 
 	public void endVisit(SuperConstructorInvocation treeNode)
@@ -531,7 +651,6 @@ class SubsequentASTVisitor extends ASTVisitor
 		String treeNodeString = treeNode.toString();
 		int startPosition = treeNode.getStartPosition();
 		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
-		//System.out.println(treeNodeString);
 		if(methodReturnTypesMap.containsKey(treeNodeString))
 		{
 			Set<NodeJSON> candidateReturnNodes = methodReturnTypesMap.get(treeNodeString).get(scopeArray);
@@ -706,6 +825,8 @@ class SubsequentASTVisitor extends ASTVisitor
 			this.json = main_json;
 		}
 	}
+	
+	
 	private Set<NodeJSON> removeInheritedRetainParentMethod(Set<NodeJSON> set) 
 	{
 		Collection<NodeJSON> removeSet = new ArrayList<NodeJSON>();
@@ -790,7 +911,6 @@ class SubsequentASTVisitor extends ASTVisitor
 			}
 		};
 		TreeSet<JSONObject> set = new TreeSet<JSONObject>(comprator);
-		//System.out.println(json.toString(2));
 		if(json.get("api_elements") instanceof JSONArray)
 		{
 			JSONArray array = (JSONArray) json.get("api_elements");
