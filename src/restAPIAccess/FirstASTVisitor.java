@@ -412,9 +412,7 @@ class FirstASTVisitor extends ASTVisitor
 		{
 			expressionString = expression.toString();
 			if(expressionString.startsWith("(") && expressionString.endsWith(")"))
-			{
 				expressionString = expressionString.substring(1, expressionString.length()-1);
-			}
 		}
 
 		if(expression == null)
@@ -468,9 +466,7 @@ class FirstASTVisitor extends ASTVisitor
 								printmethods.put(startPosition, candidateSuperClassMethod);
 								NodeJSON retElement = model.getMethodReturn(candidateSuperClassMethod, methodReturnCache);
 								if(retElement!=null)
-								{
 									candidateAccumulator.put(scopeArray, retElement);
-								}
 							}
 						}
 					}
@@ -521,7 +517,6 @@ class FirstASTVisitor extends ASTVisitor
 		}
 		else if(variableTypeMap.containsKey(expressionString))
 		{
-
 			ArrayList<NodeJSON> replacementClassNodesList = new ArrayList<NodeJSON>();
 			HashMultimap<ArrayList<Integer>, NodeJSON> temporaryMap = variableTypeMap.get(expressionString);
 			ArrayList<Integer> rightScopeArray = getNodeSet(temporaryMap, scopeArray);
@@ -899,6 +894,11 @@ class FirstASTVisitor extends ASTVisitor
 				if(((String)graphParam.getProperty("exactName")).equals(arg) || ((String)graphParam.getProperty("id")).equals(arg))
 				{
 					flag=0;
+					break;
+				}
+				else if(((String)graphParam.getProperty("exactName")).endsWith("." + arg))
+				{
+					flag = 0;
 					break;
 				}
 				else if(arg.equals("UNKNOWN"))
