@@ -138,9 +138,7 @@ class SubsequentASTVisitor extends ASTVisitor
 			{
 				Set<NodeJSON> temp = printtypes.get(key);
 				for(NodeJSON node : temp)
-				{
-					importList.add(getCorrespondingImport((String)node.getProperty("id")));
-				}
+					addCorrespondingImport((String)node.getProperty("id"));
 			}
 		}
 		
@@ -160,6 +158,16 @@ class SubsequentASTVisitor extends ASTVisitor
 		}
 	}
 	
+	private void addCorrespondingImport(String classID)
+	{
+		int loc = classID.indexOf('.');
+		if(loc != -1)
+		{
+			String possibleImport = classID.substring(0, classID.lastIndexOf(".")) + ".*";
+			importList.add(possibleImport);
+		}
+	}
+	
 	private void upDateBasedOnImports()
 	{
 		//Update variableTypeMap to hold only a possible import if one exists. Else leave untouched.
@@ -167,7 +175,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		for(Integer key : printtypes.keySet())
 		{
 			Set<NodeJSON> list = printtypes.get(key);
-			HashSet<NodeJSON> newList = getNewClassElementsList(list);
+			Set<NodeJSON> newList = getNewClassElementsList(list);
 			if(!newList.isEmpty())
 			{
 				tempprinttypes.putAll(key, newList);
@@ -190,7 +198,7 @@ class SubsequentASTVisitor extends ASTVisitor
 				temp.add(model.getMethodContainer(method, methodContainerCache));
 			}
 			
-			HashSet<NodeJSON> replacementList = getNewClassElementsList(temp);
+			Set<NodeJSON> replacementList = getNewClassElementsList(temp);
 			
 			HashSet<NodeJSON> newList = new HashSet<NodeJSON>();
 			for(NodeJSON method : list)
@@ -213,55 +221,36 @@ class SubsequentASTVisitor extends ASTVisitor
 		printmethods = tempprintmethods;
 	}
 	
-	private HashSet<NodeJSON> getNewClassElementsList(Set<NodeJSON> candidateClassNodes)
+	private Set<NodeJSON> getNewClassElementsList(Set<NodeJSON> list)
 	{
-		HashSet<NodeJSON> templist = new HashSet<NodeJSON>();
-		int flagVar2 = 0;
-		int flagVar3 = 0;
-		for(NodeJSON ce: candidateClassNodes)
+		Set<NodeJSON> prunedClassElementList = new HashSet<NodeJSON>();
+		int flag = 0;
+		if(!importList.isEmpty())
 		{
-			String name = (String) ce.getProperty("id");
-			int flagVar1 = 0;
-			if(importList.isEmpty() == false)
+			for(NodeJSON classElement: list)
 			{
+				String className = (String) classElement.getProperty("id");
+
 				for(String importItem : importList)
 				{
-					if(importItem != null)
+					if(importItem.contains(".*"))
 					{
-						if(importItem.contains(".*"))
-						{
-							importItem = importItem.substring(0, importItem.indexOf(".*"));
-						}
-						if(name.startsWith(importItem) || name.startsWith("java.lang"))
-						{
-							templist.clear();
-							templist.add(ce);
-							flagVar1 = 1;
-							break;
-						}
+						importItem = importItem.substring(0, importItem.indexOf(".*"));
+					}
+					if(className.startsWith(importItem) || className.startsWith("java.lang"))
+					{
+						prunedClassElementList.add(classElement);
+						flag = 1;
 					}
 				}
 			}
-			if(flagVar1==1)
-				break;
-			//else if(name.startsWith("java."))
-			else if(false)
-			{
-				if(flagVar2==0)
-				{
-					templist.clear();
-					flagVar2 =1;
-				}
-				templist.add(ce);
-				flagVar3 = 1;
-			}
+			if(flag == 0)
+				return list;
 			else
-			{
-				if(flagVar3 == 0)
-					templist.add(ce);
-			}
+				return prunedClassElementList;
 		}
-		return templist;
+		else
+			return list;
 	}
 
 	private ArrayList<Integer> getScopeArray(ASTNode treeNode)
@@ -420,13 +409,7 @@ class SubsequentASTVisitor extends ASTVisitor
 			if(newClassNodes.size() < tolerance)
 			{
 				for(NodeJSON newClassNode : newClassNodes)
-				{
-					String possibleImport = getCorrespondingImport(newClassNode.getProperty("id").toString());
-					if(possibleImport!=null)
-					{
-						importList.add(possibleImport);
-					}
-				}
+					addCorrespondingImport(newClassNode.getProperty("id").toString());
 			}
 			
 			temporaryMap1.replaceValues(rightScopeArray1, newClassNodes);
@@ -473,11 +456,7 @@ class SubsequentASTVisitor extends ASTVisitor
 			if(newClassNodes.size() < tolerance)
 			{
 				for(NodeJSON newClassNode : newClassNodes)
-				{
-					String possibleImport = getCorrespondingImport(newClassNode.getProperty("id").toString());
-					if(possibleImport!=null)
-						importList.add(possibleImport);
-				}
+					addCorrespondingImport(newClassNode.getProperty("id").toString());
 			}
 			temporaryMap1.removeAll(rightScopeArray1);
 			temporaryMap1.putAll(rightScopeArray1, newClassNodes);
@@ -499,17 +478,6 @@ class SubsequentASTVisitor extends ASTVisitor
 			}
 		}
 		return false;
-	}
-
-	private String getCorrespondingImport(String classID) 
-	{
-		int loc = classID.indexOf('.');
-		if(loc == -1)
-			return null;
-		else
-		{
-			return(classID.substring(0, classID.lastIndexOf("."))+".*") ;
-		}
 	}
 
 	private ArrayList<Integer> getNodeSet(HashMultimap<ArrayList<Integer>, NodeJSON> celist2, ArrayList<Integer> scopeArray) 
@@ -598,13 +566,7 @@ class SubsequentASTVisitor extends ASTVisitor
 			if(newClassNodes.size() < tolerance)
 			{
 				for(NodeJSON newClassNode : newClassNodes)
-				{
-					String possibleImport = getCorrespondingImport(newClassNode.getProperty("id").toString());
-					if(possibleImport!=null)
-					{
-						importList.add(possibleImport);
-					}
-				}
+					addCorrespondingImport(newClassNode.getProperty("id").toString());
 			}
 			
 			Set<NodeJSON> newMethodNodes = new HashSet<NodeJSON>();

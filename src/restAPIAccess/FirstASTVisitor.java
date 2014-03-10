@@ -29,7 +29,6 @@ import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
-import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -43,7 +42,6 @@ import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.json.JSONObject;
 
-@SuppressWarnings("unchecked")
 class FirstASTVisitor extends ASTVisitor
 {
 	public GraphServerAccess model;
@@ -57,8 +55,9 @@ class FirstASTVisitor extends ASTVisitor
 	public HashMap<String, ArrayList<NodeJSON>> parentNodeCache;
 	public HashMap<String, ArrayList<ArrayList<NodeJSON>>> shortClassShortMethodCache;
 
-	public HashMultimap<String, String> localMethods;
-	public HashSet<String> localClasses;
+
+	public HashMultimap<String, String> localMethods; 	//list of localMethods mapped to their corresponding parent classes
+	public HashSet<String> localClasses;				//List of local class names
 
 	public HashMap<String, HashMultimap<ArrayList<Integer>,NodeJSON>> methodReturnTypesMap;
 	public HashMap<String, HashMultimap<ArrayList<Integer>,NodeJSON>> variableTypeMap;//holds variables, fields and method param types
@@ -85,6 +84,124 @@ class FirstASTVisitor extends ASTVisitor
 		fetchLocalClassesAndMethods(cu);
 	}
 
+
+	/*
+	 * Initialize fields in the FirstASTVisitor class
+	 */
+	private void initializeFields()
+	{
+		localMethods = HashMultimap.create();
+		localClasses = new HashSet<String>();
+		variableTypeMap = new HashMap<String, HashMultimap<ArrayList<Integer>,NodeJSON>>();
+		methodReturnTypesMap = new HashMap<String, HashMultimap<ArrayList<Integer>,NodeJSON>>();
+		printtypes = HashMultimap.create();
+		printmethods = HashMultimap.create();
+		printTypesMap = new HashMap<String, Integer>();
+		printMethodsMap = new HashMap<String, Integer>();
+		importList = new HashSet<String>();
+
+		candidateClassNodesCache = new HashMap<String, IndexHits<NodeJSON>>();
+		candidateMethodNodesCache = new HashMap<String, IndexHits<NodeJSON>>();
+		methodContainerCache = new HashMap<NodeJSON, NodeJSON>();
+		methodReturnCache = new HashMap<NodeJSON, NodeJSON>();
+		methodParameterCache = new HashMap<NodeJSON, ArrayList<NodeJSON>>();
+		parentNodeCache = new HashMap<String, ArrayList<NodeJSON>>();
+		shortClassShortMethodCache = new HashMap<String, ArrayList<ArrayList<NodeJSON>>>();
+
+		importList = new HashSet<String>();
+		classNames = new Stack<String>();
+		superclassname = new String();
+		interfaces = new ArrayList<Object>();
+	}
+
+	
+	/*
+	 * Prints the values in each of the maps stored as fields.
+	 */
+	public void printFields()
+	{
+		System.out.println("methodReturnTypesMap: " + methodReturnTypesMap);
+		System.out.println("variableTypeMap: " + variableTypeMap);
+		System.out.println("printtypes: " + printtypes);
+		System.out.println("printmethods: " + printmethods);
+		System.out.println("printTypesMap: " + printTypesMap);
+		System.out.println("printMethodsMap: " + printMethodsMap);
+		System.out.println("possibleImportList: " + importList);
+		System.out.println("localMethods: " + localMethods);
+	}
+
+	/*
+	 * Prunes candidates off a list of candidates based on possible import statements identified so far.
+	 * Returns the reduced list (if any changes, else returns the input list as is).
+	 */
+	private ArrayList<NodeJSON> getNewClassElementsList(ArrayList<NodeJSON> classElementList)
+	{
+		ArrayList<NodeJSON> prunedClassElementList = new ArrayList<NodeJSON>();
+		int flag = 0;
+		if(!importList.isEmpty())
+		{
+			for(NodeJSON classElement: classElementList)
+			{
+				String className = (String) classElement.getProperty("id");
+
+				for(String importItem : importList)
+				{
+					if(importItem.contains(".*"))
+					{
+						importItem = importItem.substring(0, importItem.indexOf(".*"));
+					}
+					if(className.startsWith(importItem) || className.startsWith("java.lang"))
+					{
+						prunedClassElementList.add(classElement);
+						flag = 1;
+					}
+				}
+			}
+			if(flag == 0)
+				return classElementList;
+			else
+				return prunedClassElementList;
+		}
+		else
+			return classElementList;
+	}
+
+	
+	/*
+	 * Called when a match with cardinality < Tolerance is found. 
+	 * Corresponding import is extracted and added to list of imports.
+	 */
+	private void addCorrespondingImport(String classID)
+	{
+		int loc = classID.indexOf('.');
+		if(loc != -1)
+		{
+			String possibleImport = classID.substring(0, classID.lastIndexOf(".")) + ".*";
+			importList.add(possibleImport);
+		}
+	}
+	
+	
+	/*
+	 * An array of character positions of parent nodes is extracted and returned to track scope of a statement.
+	 */
+	private ArrayList<Integer> getScopeArray(ASTNode treeNode)
+	{
+		ASTNode parentNode;
+		ArrayList<Integer> parentList = new ArrayList<Integer>();
+		while((parentNode = treeNode.getParent())!=null)
+		{
+			//do not include parenthesized type nodes in the list.
+			if(parentNode.getNodeType() != 36)
+				parentList.add(parentNode.getStartPosition());
+			treeNode = parentNode;
+		}
+		return parentList;
+	}
+
+	/*
+	 * Populates a list of local classes and methods inside these classes into the localClasses and localMethods fields.
+	 */
 	private void fetchLocalClassesAndMethods(CompilationUnit cu) 
 	{
 		cu.accept(new ASTVisitor() {
@@ -127,276 +244,10 @@ class FirstASTVisitor extends ASTVisitor
 			}
 		});
 	}
-
-	private void initializeFields()
-	{
-		localMethods = HashMultimap.create();
-		localClasses = new HashSet<String>();
-		variableTypeMap = new HashMap<String, HashMultimap<ArrayList<Integer>,NodeJSON>>();
-		methodReturnTypesMap = new HashMap<String, HashMultimap<ArrayList<Integer>,NodeJSON>>();
-		printtypes = HashMultimap.create();
-		printmethods = HashMultimap.create();
-		printTypesMap = new HashMap<String, Integer>();
-		printMethodsMap = new HashMap<String, Integer>();
-		importList = new HashSet<String>();
-
-		candidateClassNodesCache = new HashMap<String, IndexHits<NodeJSON>>();
-		candidateMethodNodesCache = new HashMap<String, IndexHits<NodeJSON>>();
-		methodContainerCache = new HashMap<NodeJSON, NodeJSON>();
-		methodReturnCache = new HashMap<NodeJSON, NodeJSON>();
-		methodParameterCache = new HashMap<NodeJSON, ArrayList<NodeJSON>>();
-		parentNodeCache = new HashMap<String, ArrayList<NodeJSON>>();
-		shortClassShortMethodCache = new HashMap<String, ArrayList<ArrayList<NodeJSON>>>();
-
-		importList = new HashSet<String>();
-		classNames = new Stack<String>();
-		superclassname = new String();
-		interfaces = new ArrayList<Object>();
-	}
-
-	public void printFields()
-	{
-		System.out.println("methodReturnTypesMap: " + methodReturnTypesMap);
-		System.out.println("variableTypeMap: " + variableTypeMap);
-		System.out.println("printtypes: " + printtypes);
-		System.out.println("printmethods: " + printmethods);
-		System.out.println("printTypesMap: " + printTypesMap);
-		System.out.println("printMethodsMap: " + printMethodsMap);
-		System.out.println("possibleImportList: " + importList);
-		System.out.println("localMethods: " + localMethods);
-	}
-
-	private ArrayList<NodeJSON> getNewClassElementsList(ArrayList<NodeJSON> celist)
-	{
-		ArrayList<NodeJSON> templist = new ArrayList<NodeJSON>();
-		int flagVar2 = 0;
-		int flagVar3 = 0;
-		for(NodeJSON ce: celist)
-		{
-			String name = (String) ce.getProperty("id");
-			int flagVar1 = 0;
-			if(importList.isEmpty() == false)
-			{
-				for(String importItem : importList)
-				{
-					if(importItem.contains(".*"))
-					{
-						importItem = importItem.substring(0, importItem.indexOf(".*"));
-					}
-					if(name.startsWith(importItem) || name.startsWith("java.lang"))
-					{
-						templist.clear();
-						templist.add(ce);
-						flagVar1 = 1;
-						//break;
-					}
-				}
-			}
-			if(flagVar1==1)
-				break;
-			//else if(name.startsWith("java.") || name.startsWith("javax."))
-			else if(false)	
-			{
-				if(flagVar2==0)
-				{
-					templist.clear();
-					flagVar2 =1;
-				}
-				templist.add(ce);
-				flagVar3 = 1;
-			}
-			else
-			{
-				if(flagVar3 == 0)
-					templist.add(ce);
-			}
-		}
-		return templist;
-	}
-
-	private String getCorrespondingImport(String classID) 
-	{
-		int loc = classID.indexOf('.');
-		if(loc == -1)
-			return null;
-		else
-		{
-			return(classID.substring(0, classID.lastIndexOf("."))+".*") ;
-		}
-	}
-
-	private ArrayList<Integer> getScopeArray(ASTNode treeNode)
-	{
-		ASTNode parentNode;
-		ArrayList<Integer> parentList = new ArrayList<Integer>();
-		while((parentNode = treeNode.getParent())!=null)
-		{
-			//do not include parenthesised type nodes in the list.
-			if(parentNode.getNodeType() != 36)
-				parentList.add(parentNode.getStartPosition());
-			/*else
-				System.out.println("paranthesised");*/
-			treeNode = parentNode;
-		}
-		return parentList;
-	}
-
-	public boolean visit(VariableDeclarationStatement treeNode)
-	{
-		ArrayList<Integer> variableScopeArray = getScopeArray(treeNode);
-		String treeNodeType = treeNode.getType().toString();
-		if(treeNode.getType().getNodeType() == 74)
-			treeNodeType = ((ParameterizedType)treeNode.getType()).getType().toString();
-		
-		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
-		if(!isLocalClass(treeNodeType))
-			candidateClassNodes = model.getCandidateClassNodes(treeNodeType, candidateClassNodesCache);
-		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
-		
-		for(int j=0; j < treeNode.fragments().size(); j++)
-		{
-			HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator = null;
-			String variableName = ((VariableDeclarationFragment)treeNode.fragments().get(j)).getName().toString();
-			int startPosition = treeNode.getType().getStartPosition();
-			if(variableTypeMap.containsKey(variableName))
-			{
-				candidateAccumulator = variableTypeMap.get(variableName);
-			}
-			else
-			{
-				candidateAccumulator = HashMultimap.create();
-			}
-
-			for(NodeJSON candidateClass : candidateClassNodes)
-			{
-				candidateAccumulator.put(variableScopeArray, candidateClass);
-				if(candidateClassNodes.size() < tolerance)
-				{
-					String possibleImport = getCorrespondingImport(candidateClass.getProperty("id").toString());
-					if(possibleImport!=null)
-						importList.add(possibleImport);
-				}
-				printtypes.put(startPosition, candidateClass);
-				printTypesMap.put(variableName, startPosition);
-			}
-			variableTypeMap.put(variableName, candidateAccumulator);
-		}
-		return true;
-	}
-
-	public boolean visit(EnhancedForStatement treeNode)
-	{
-		ArrayList<Integer> variableScopeArray = getScopeArray(treeNode.getParent());
-		HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator = null;
-		String variableType = treeNode.getParameter().getType().toString();
-		if(treeNode.getParameter().getType().getNodeType() == 74)
-			variableType = ((ParameterizedType)treeNode.getParameter().getType()).getType().toString();
-		String variableName = treeNode.getParameter().getName().toString();
-		if(variableTypeMap.containsKey(treeNode.getParameter().getName().toString()))
-		{
-			candidateAccumulator = variableTypeMap.get(variableName);
-		}
-		else
-		{
-			candidateAccumulator = HashMultimap.create();
-		}
-		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
-		if(!isLocalClass(variableType))
-			candidateClassNodes=model.getCandidateClassNodes(variableType, candidateClassNodesCache);
-		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
-		for(NodeJSON candidateClass : candidateClassNodes)
-		{
-			int startPosition = treeNode.getParameter().getType().getStartPosition();
-			candidateAccumulator.put(variableScopeArray, candidateClass);
-			if(candidateClassNodes.size() < tolerance)
-			{
-				String possibleImport = getCorrespondingImport(candidateClass.getProperty("id").toString());
-				if(possibleImport!=null)
-				{
-					importList.add(possibleImport);
-				}
-			}
-			printtypes.put(startPosition, candidateClass);
-			printTypesMap.put(variableName, startPosition);
-		}
-		variableTypeMap.put(variableName, candidateAccumulator);
-		return true;
-	}
-
-	public void endVisit(ForStatement node)
-	{
-		/*for(int j=0;j<node.initializers().size();j++)
-		{
-			//System.out.println(((VariableDeclarationFragment)node.fragments().get(j)).getName().toString() + " : "+getScopeArray(node).toString() + "$$$$$");
-			ArrayList<Integer> scopeArray = getScopeArray(node);
-			HashMultimap<ArrayList<Integer>, NodeJSON> temp = null;
-			if(globaltypes2.containsKey(((VariableDeclarationFragment)node.initializers().get(j)).getName().toString()))
-			{
-				temp = globaltypes2.get(((VariableDeclarationFragment)node.initializers().get(j)).getName().toString());
-			}
-			else
-			{
-				temp = HashMultimap.create();
-			}
-			Collection<NodeJSON> celist=
-getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j)).getType().toString());
-			celist = getNewCeList(celist);
-			for(NodeJSON ce : celist)
-			{
-						temp.put(scopeArray, ce);
-						printtypes.put(((VariableDeclarationFragment)node.initializers().get(j)).getStartPosition(), ce);
-						printTypesMap.put(((VariableDeclarationFragment)node.fragments().get(j)).getName().toString(), node.getType().getStartPosition());
-			}
-			globaltypes2.put(((VariableDeclarationFragment)node.fragments().get(j)).getName().toString(), temp);
-		}*/
-	}
-
-	public void endVisit(FieldDeclaration treeNode) 
-	{
-		int startPosition = treeNode.getType().getStartPosition();
-
-		String treeNodeType = null;
-		if(treeNode.getType().getNodeType()==74)
-			treeNodeType = ((ParameterizedType)treeNode.getType()).getType().toString();
-		else
-			treeNodeType = treeNode.getType().toString();
-		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
-		if(!isLocalClass(treeNodeType))
-			candidateClassNodes = model.getCandidateClassNodes(treeNodeType, candidateClassNodesCache);
-		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
-		
-		for(int j=0; j < treeNode.fragments().size(); j++)
-		{
-			String fieldName = ((VariableDeclarationFragment)treeNode.fragments().get(j)).getName().toString();
-			ArrayList<Integer> variableScopeArray = getScopeArray(treeNode);
-			HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator = null;
-			if(variableTypeMap.containsKey(fieldName))
-			{
-				candidateAccumulator = variableTypeMap.get(fieldName);
-			}
-			else
-			{
-				candidateAccumulator = HashMultimap.create();
-			}
-
-			for(NodeJSON candidateClass : candidateClassNodes)
-			{
-				candidateAccumulator.put(variableScopeArray, candidateClass);
-				if(candidateClassNodes.size() < tolerance)
-				{
-					String possibleImport = getCorrespondingImport(candidateClass.getProperty("id").toString());
-					if(possibleImport!=null)
-					{
-						importList.add(possibleImport);
-					}
-				}
-				printtypes.put(startPosition, candidateClass);
-				printTypesMap.put(fieldName, startPosition);
-			}
-			variableTypeMap.put(fieldName, candidateAccumulator);
-		}
-	}
-
+	
+	/*
+	 * Checks if a Method called by an Expression is a local method or not.
+	 */
 	public boolean isLocalMethod(String methodName, Expression expression)
 	{
 		if(expression == null)
@@ -414,17 +265,132 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 				if(expression.toString().equals("this"))
 					return true;
 			}
-
 		}
 		return false;
 	}
 
-	public boolean isLocalClass(String incClassName)
+	/*
+	 * Checks if a class is a locally defined class.
+	 */
+	public boolean isLocalClass(String className)
 	{
-		if(localClasses.contains(incClassName))
+		if(localClasses.contains(className))
 			return true;
 		else
 			return false;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see org.eclipse.jdt.core.dom.ASTVisitor#visit(org.eclipse.jdt.core.dom.VariableDeclarationStatement)
+	 * Extracts candidate classes for variables and populates the maps accordingly 
+	 */
+	public boolean visit(VariableDeclarationStatement treeNode)
+	{
+		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
+		int startPosition = treeNode.getType().getStartPosition();
+		String treeNodeType = treeNode.getType().toString();
+		if(treeNode.getType().getNodeType() == 74)
+			treeNodeType = ((ParameterizedType)treeNode.getType()).getType().toString();
+
+		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
+		if(!isLocalClass(treeNodeType))
+			candidateClassNodes = model.getCandidateClassNodes(treeNodeType, candidateClassNodesCache);
+		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
+
+		for(int j = 0; j < treeNode.fragments().size(); j++)
+		{
+			HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator;
+			String variableName = ((VariableDeclarationFragment) treeNode.fragments().get(j)).getName().toString();
+
+			if(variableTypeMap.containsKey(variableName))
+				candidateAccumulator = variableTypeMap.get(variableName);
+			else
+				candidateAccumulator = HashMultimap.create();
+
+			for(NodeJSON candidateClass : candidateClassNodes)
+			{
+				candidateAccumulator.put(scopeArray, candidateClass);
+				printtypes.put(startPosition, candidateClass);
+				printTypesMap.put(variableName, startPosition);
+				if(candidateClassNodes.size() < tolerance)
+					addCorrespondingImport(candidateClass.getProperty("id").toString());
+			}
+			variableTypeMap.put(variableName, candidateAccumulator);
+		}
+		return true;
+	}
+
+	public boolean visit(EnhancedForStatement treeNode)
+	{
+		ArrayList<Integer> scopeArray = getScopeArray(treeNode.getParent());
+		int startPosition = treeNode.getParameter().getType().getStartPosition();
+		
+		String variableType = treeNode.getParameter().getType().toString();
+		if(treeNode.getParameter().getType().getNodeType() == 74)
+			variableType = ((ParameterizedType)treeNode.getParameter().getType()).getType().toString();
+		
+		String variableName = treeNode.getParameter().getName().toString();
+		
+		HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator;
+		if(variableTypeMap.containsKey(treeNode.getParameter().getName().toString()))
+			candidateAccumulator = variableTypeMap.get(variableName);
+		else
+			candidateAccumulator = HashMultimap.create();
+		
+		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
+		if(!isLocalClass(variableType))
+			candidateClassNodes=model.getCandidateClassNodes(variableType, candidateClassNodesCache);
+		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
+		
+		for(NodeJSON candidateClass : candidateClassNodes)
+		{
+			candidateAccumulator.put(scopeArray, candidateClass);
+			printtypes.put(startPosition, candidateClass);
+			printTypesMap.put(variableName, startPosition);
+			if(candidateClassNodes.size() < tolerance)
+				addCorrespondingImport(candidateClass.getProperty("id").toString());
+		}
+		variableTypeMap.put(variableName, candidateAccumulator);
+		return true;
+	}
+
+	
+	public void endVisit(FieldDeclaration treeNode) 
+	{
+		int startPosition = treeNode.getType().getStartPosition();
+		ArrayList<Integer> variableScopeArray = getScopeArray(treeNode);
+		
+		String fieldType = null;
+		if(treeNode.getType().getNodeType()==74)
+			fieldType = ((ParameterizedType)treeNode.getType()).getType().toString();
+		else
+			fieldType = treeNode.getType().toString();
+		
+		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
+		if(!isLocalClass(fieldType))
+			candidateClassNodes = model.getCandidateClassNodes(fieldType, candidateClassNodesCache);
+		candidateClassNodes = getNewClassElementsList(candidateClassNodes);
+
+		for(int j=0; j < treeNode.fragments().size(); j++)
+		{
+			String fieldName = ((VariableDeclarationFragment)treeNode.fragments().get(j)).getName().toString();
+			HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator = null;
+			if(variableTypeMap.containsKey(fieldName))
+				candidateAccumulator = variableTypeMap.get(fieldName);
+			else
+				candidateAccumulator = HashMultimap.create();
+
+			for(NodeJSON candidateClass : candidateClassNodes)
+			{
+				candidateAccumulator.put(variableScopeArray, candidateClass);
+				printtypes.put(startPosition, candidateClass);
+				printTypesMap.put(fieldName, startPosition);
+				if(candidateClassNodes.size() < tolerance)
+					addCorrespondingImport(candidateClass.getProperty("id").toString());
+			}
+			variableTypeMap.put(fieldName, candidateAccumulator);
+		}
 	}
 
 	public void endVisit(MethodInvocation treeNode)
@@ -434,13 +400,14 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 		String treeNodeMethodExactName = treeNode.getName().toString();
 		String treeNodeString = treeNode.toString();
 		int startPosition = treeNode.getName().getStartPosition();
+		
 		String expressionString = null;
-
 		if(isLocalMethod(treeNodeMethodExactName, expression) == true)
-		{
 			return;
-		}
-
+		
+		printTypesMap.put(treeNodeString, startPosition);
+		printMethodsMap.put(treeNodeString, startPosition);
+		
 		if(expression != null)
 		{
 			expressionString = expression.toString();
@@ -450,24 +417,18 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			}
 		}
 
-		if(expression==null)
+		if(expression == null)
 		{
-			if(superclassname.isEmpty() == false)
-			{	
+			if(!superclassname.isEmpty())
+			{
 				/*
 				 * Handles inheritance, where methods from Superclasses can be directly called
 				 */
-				printTypesMap.put(treeNodeString, startPosition);
-				printMethodsMap.put(treeNodeString, startPosition);
 				HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator = null;
 				if(methodReturnTypesMap.containsKey(treeNodeString))
-				{
 					candidateAccumulator = methodReturnTypesMap.get(treeNodeString);
-				}
 				else
-				{
 					candidateAccumulator = HashMultimap.create();
-				}
 				ArrayList<NodeJSON> candidateSuperClassNodes = new ArrayList<NodeJSON>();
 				if(!isLocalClass(superclassname))
 					candidateSuperClassNodes = model.getCandidateClassNodes(superclassname, candidateClassNodesCache);
@@ -501,13 +462,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 							if(matchParams(candidateSuperClassMethod, treeNode.arguments())==true)
 							{
 								if(candidateSuperClassNodes.size() < tolerance)
-								{
-									String possibleImport = getCorrespondingImport(candidateSuperClass.getProperty("id").toString());
-									if(possibleImport!=null)
-									{
-										importList.add(possibleImport);
-									}
-								}
+									addCorrespondingImport(candidateSuperClass.getProperty("id").toString());
 
 								printtypes.put(startPosition, candidateSuperClass);
 								printmethods.put(startPosition, candidateSuperClassMethod);
@@ -527,8 +482,6 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 				/*
 				 * Might be user declared helper functions or maybe object reference is assumed to be obvious in the snippet
 				 */
-				printTypesMap.put(treeNodeString, startPosition);
-				printMethodsMap.put(treeNodeString, startPosition);
 				HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator = null;
 				if(methodReturnTypesMap.containsKey(treeNodeString))
 				{
@@ -545,14 +498,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 					{
 						NodeJSON methodContainerClassNode = model.getMethodContainer(candidateMethodNode, methodContainerCache);
 						if(candidateMethodNodes.size() < tolerance)
-						{
-							//System.out.println("yeah");
-							String possibleImport = getCorrespondingImport(methodContainerClassNode.getProperty("id").toString());
-							if(possibleImport!=null)
-							{
-								importList.add(possibleImport);
-							}
-						}
+							addCorrespondingImport(methodContainerClassNode.getProperty("id").toString());
 						printtypes.put(startPosition, methodContainerClassNode);
 						printmethods.put(startPosition, candidateMethodNode);
 						NodeJSON retElement = model.getMethodReturn(candidateMethodNode, methodReturnCache);
@@ -575,8 +521,6 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 		}
 		else if(variableTypeMap.containsKey(expressionString))
 		{
-			printTypesMap.put(treeNodeString, startPosition);
-			printMethodsMap.put(treeNodeString, startPosition);
 
 			ArrayList<NodeJSON> replacementClassNodesList = new ArrayList<NodeJSON>();
 			HashMultimap<ArrayList<Integer>, NodeJSON> temporaryMap = variableTypeMap.get(expressionString);
@@ -654,9 +598,9 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 
 			//if(replacementClassNodesList.isEmpty() == false)
 			{
-				
+
 				//variableTypeMap.get(expressionString).replaceValues(rightScopeArray,replacementClassNodesList);
-				
+
 				temporaryMap.replaceValues(rightScopeArray,replacementClassNodesList);
 				variableTypeMap.put(expressionString, temporaryMap);
 				printtypes.removeAll(printTypesMap.get(expressionString));
@@ -666,8 +610,6 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 		else if(expressionString.matches("[A-Z][a-zA-Z]*"))
 		{
 
-			printTypesMap.put(treeNodeString, startPosition);
-			printMethodsMap.put(treeNodeString, startPosition);
 			HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator = null;
 			if(methodReturnTypesMap.containsKey(treeNodeString))
 			{
@@ -682,7 +624,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 			ArrayList<NodeJSON> candidateMethodNodes = new ArrayList<NodeJSON>();
 			ArrayList<NodeJSON> candidateReturnNodes = new ArrayList<NodeJSON>();
-			
+
 			if(!isLocalClass(expressionString))
 			{
 				ArrayList<ArrayList<NodeJSON>> tempArrayList = model.getMethodNodeWithShortClass(treeNodeMethodExactName, expressionString, shortClassShortMethodCache, methodReturnCache, methodContainerCache);
@@ -716,12 +658,9 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 				}
 			}
 		}
-		
+
 		else if(methodReturnTypesMap.containsKey(expressionString))
 		{
-			printTypesMap.put(treeNodeString, startPosition);
-			printMethodsMap.put(treeNodeString, startPosition);
-
 			HashMultimap<ArrayList<Integer>, NodeJSON> nodeInMap = methodReturnTypesMap.get(expressionString);
 			HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator = null;
 			if(methodReturnTypesMap.containsKey(treeNodeString))
@@ -1041,13 +980,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			{
 				temporaryMap.put(scopeArray, candidateClassNode);
 				if(candidateClassNodes.size() < tolerance)
-				{
-					String possibleImport = getCorrespondingImport(candidateClassNode.getProperty("id").toString());
-					if(possibleImport!=null)
-					{
-						importList.add(possibleImport);
-					}
-				}
+					addCorrespondingImport(candidateClassNode.getProperty("id").toString());
 				printtypes.put(param.get(i).getType().getStartPosition(),candidateClassNode);
 				printTypesMap.put(param.get(i).getName().toString(), param.get(i).getType().getStartPosition());
 			}
@@ -1073,13 +1006,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 						{
 							NodeJSON parentNode = model.getMethodContainer(candidateMethodNode, methodContainerCache);
 							if(candidateMethodNodes.size() < tolerance)
-							{
-								String possibleImport = getCorrespondingImport(parentNode.getProperty("id").toString());
-								if(possibleImport!=null)
-								{
-									importList.add(possibleImport);
-								}
-							}
+								addCorrespondingImport(parentNode.getProperty("id").toString());
 							printtypes.put(startPosition, parentNode);
 							printmethods.put(startPosition, candidateMethodNode);
 						}	
@@ -1109,13 +1036,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 							{
 								NodeJSON parentNode = model.getMethodContainer(candidateMethodNode, methodContainerCache);
 								if(candidateMethodNodes.size() < tolerance)
-								{
-									String possibleImport = getCorrespondingImport(parentNode.getProperty("id").toString());
-									if(possibleImport!=null)
-									{
-										importList.add(possibleImport);
-									}
-								}
+									addCorrespondingImport(parentNode.getProperty("id").toString());
 								printtypes.put(startPosition, parentNode);
 								printmethods.put(startPosition, candidateMethodNode);
 							}
@@ -1159,13 +1080,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 						printmethods.put(startPosition, candidateMethodNode);
 						NodeJSON parentNode = model.getMethodContainer(candidateMethodNode, methodContainerCache);
 						if(candidateMethodNodes.size() < tolerance)
-						{
-							String possibleImport = getCorrespondingImport(parentNode.getProperty("id").toString());
-							if(possibleImport!=null)
-							{
-								importList.add(possibleImport);
-							}
-						}
+							addCorrespondingImport(parentNode.getProperty("id").toString());
 						printtypes.put(startPosition, parentNode);
 						NodeJSON returnNode = model.getMethodReturn(candidateMethodNode, methodReturnCache);
 						if(returnNode != null)
@@ -1202,13 +1117,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 		{
 			temporaryMap.put(scopeArray, candidateClassNode);
 			if(candidateClassNodes.size() < tolerance)
-			{
-				String possibleImport = getCorrespondingImport(candidateClassNode.getProperty("id").toString());
-				if(possibleImport!=null)
-				{
-					importList.add(possibleImport);
-				}
-			}
+				addCorrespondingImport(candidateClassNode.getProperty("id").toString());
 			printtypes.put(startPosition, candidateClassNode);
 			printTypesMap.put(node.getException().getName().toString(), startPosition);
 		}
@@ -1248,13 +1157,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 						printmethods.put(startPosition,candidateMethodElement);
 						NodeJSON parentNode = model.getMethodContainer(candidateMethodElement, methodContainerCache);
 						if(candidateMethodNodes.size() < tolerance)
-						{
-							String possibleImport = getCorrespondingImport(parentNode.getProperty("id").toString());
-							if(possibleImport!=null)
-							{
-								importList.add(possibleImport);
-							}
-						}
+							addCorrespondingImport(parentNode.getProperty("id").toString());
 						printtypes.put(startPosition, parentNode);
 						NodeJSON methodReturnNode = model.getMethodReturn(candidateMethodElement, methodReturnCache);
 						if(methodReturnNode != null)
@@ -1352,13 +1255,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 									printmethods.put(startPosition,candidateMethodNode);
 									printMethodsMap.put(md.toString(), startPosition);
 									if(candidateMethodNodes.size() < tolerance)
-									{
-										String possibleImport = getCorrespondingImport(candidateClassNode.getProperty("id").toString());
-										if(possibleImport!=null)
-										{
-											importList.add(possibleImport);
-										}
-									}
+										addCorrespondingImport(candidateClassNode.getProperty("id").toString());
 									printtypes.put(startPosition, candidateClassNode);
 									printTypesMap.put(treeNode.toString(), startPosition);
 								}
@@ -1483,13 +1380,7 @@ getCandidateClassNodes(((VariableDeclarationFragment)node.initializers().get(j))
 			{
 				temp1.put(scopeArray, candidateClassNode);
 				if(candidateClassNodes.size() < tolerance)
-				{
-					String possibleImport = getCorrespondingImport(candidateClassNode.getProperty("id").toString());
-					if(possibleImport!=null)
-					{
-						importList.add(possibleImport);
-					}
-				}
+					addCorrespondingImport(candidateClassNode.getProperty("id").toString());
 				printtypes.put(node.getType().getStartPosition(), candidateClassNode);
 				temp2.put(scopeArray, candidateClassNode);
 			}
