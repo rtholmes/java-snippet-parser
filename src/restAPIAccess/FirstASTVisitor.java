@@ -747,7 +747,7 @@ class FirstASTVisitor extends ASTVisitor
 				HashMultimap<ArrayList<Integer>, NodeJSON> replacer = HashMultimap.create();
 				
 				//Since we are not sure where this variable could have be declared, we assume it should have been a field
-				ArrayList<Integer> fieldScope = new ArrayList<>();
+				ArrayList<Integer> fieldScope = new ArrayList<Integer>();
 				fieldScope.add(0);
 				replacer.putAll(fieldScope, replacementClassNodesList);
 				//replacer.putAll(getScopeArray(treeNode.getParent()), replacementClassNodesList);
