@@ -192,7 +192,7 @@ class FirstASTVisitor extends ASTVisitor
 		while((parentNode = treeNode.getParent())!=null)
 		{
 			//do not include parenthesized type nodes in the list.
-			if(parentNode.getNodeType() != 36)
+			if(parentNode.getNodeType() != ASTNode.PARENTHESIZED_EXPRESSION)
 				parentList.add(parentNode.getStartPosition());
 			treeNode = parentNode;
 		}
@@ -285,12 +285,12 @@ class FirstASTVisitor extends ASTVisitor
 	 * @see org.eclipse.jdt.core.dom.ASTVisitor#visit(org.eclipse.jdt.core.dom.VariableDeclarationStatement)
 	 * Extracts candidate classes for variables and populates the maps accordingly 
 	 */
-	public boolean visit(VariableDeclarationStatement treeNode)
+	public void endVisit(VariableDeclarationStatement treeNode)
 	{
 		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
 		int startPosition = treeNode.getType().getStartPosition();
 		String treeNodeType = treeNode.getType().toString();
-		if(treeNode.getType().getNodeType() == 74)
+		if(treeNode.getType().getNodeType() == ASTNode.PARAMETERIZED_TYPE)
 			treeNodeType = ((ParameterizedType)treeNode.getType()).getType().toString();
 
 		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
@@ -302,23 +302,25 @@ class FirstASTVisitor extends ASTVisitor
 		{
 			HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator;
 			String variableName = ((VariableDeclarationFragment) treeNode.fragments().get(j)).getName().toString();
-
+			printTypesMap.put(variableName, startPosition);
 			if(variableTypeMap.containsKey(variableName))
+			{
 				candidateAccumulator = variableTypeMap.get(variableName);
+			}
 			else
+			{
 				candidateAccumulator = HashMultimap.create();
+			}
 
 			for(NodeJSON candidateClass : candidateClassNodes)
 			{
 				candidateAccumulator.put(scopeArray, candidateClass);
 				printtypes.put(startPosition, candidateClass);
-				printTypesMap.put(variableName, startPosition);
 				if(candidateClassNodes.size() < tolerance)
 					addCorrespondingImport(candidateClass.getProperty("id").toString());
 			}
 			variableTypeMap.put(variableName, candidateAccumulator);
 		}
-		return true;
 	}
 
 	public boolean visit(EnhancedForStatement treeNode)
@@ -327,7 +329,7 @@ class FirstASTVisitor extends ASTVisitor
 		int startPosition = treeNode.getParameter().getType().getStartPosition();
 		
 		String variableType = treeNode.getParameter().getType().toString();
-		if(treeNode.getParameter().getType().getNodeType() == 74)
+		if(treeNode.getParameter().getType().getNodeType() == ASTNode.PARAMETERIZED_TYPE)
 			variableType = ((ParameterizedType)treeNode.getParameter().getType()).getType().toString();
 		
 		String variableName = treeNode.getParameter().getName().toString();
@@ -362,7 +364,7 @@ class FirstASTVisitor extends ASTVisitor
 		ArrayList<Integer> variableScopeArray = getScopeArray(treeNode);
 		
 		String fieldType = null;
-		if(treeNode.getType().getNodeType()==74)
+		if(treeNode.getType().getNodeType() == ASTNode.PARAMETERIZED_TYPE)
 			fieldType = ((ParameterizedType)treeNode.getType()).getType().toString();
 		else
 			fieldType = treeNode.getType().toString();
@@ -511,7 +513,7 @@ class FirstASTVisitor extends ASTVisitor
 		{
 
 		}
-		else if(expression.getNodeType() == 2)
+		else if(expression.getNodeType() == ASTNode.ARRAY_ACCESS)
 		{
 			//System.out.println("array method");
 		}
@@ -524,7 +526,8 @@ class FirstASTVisitor extends ASTVisitor
 				return;
 
 			Set<NodeJSON> candidateClassNodes = temporaryMap.get(rightScopeArray);
-
+			
+			
 			HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator = null;
 			if(methodReturnTypesMap.containsKey(treeNodeString))
 			{
@@ -534,7 +537,6 @@ class FirstASTVisitor extends ASTVisitor
 			{
 				candidateAccumulator = HashMultimap.create();
 			}
-
 			for(NodeJSON candidateClassNode : candidateClassNodes)
 			{
 				ArrayList<NodeJSON> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode,treeNodeMethodExactName, candidateMethodNodesCache);
@@ -743,7 +745,12 @@ class FirstASTVisitor extends ASTVisitor
 			if(replacementClassNodesList.isEmpty()==false)
 			{
 				HashMultimap<ArrayList<Integer>, NodeJSON> replacer = HashMultimap.create();
-				replacer.putAll(getScopeArray(treeNode.getParent()), replacementClassNodesList);
+				
+				//Since we are not sure where this variable could have be declared, we assume it should have been a field
+				ArrayList<Integer> fieldScope = new ArrayList<>();
+				fieldScope.add(0);
+				replacer.putAll(fieldScope, replacementClassNodesList);
+				//replacer.putAll(getScopeArray(treeNode.getParent()), replacementClassNodesList);
 				variableTypeMap.put(expressionString,replacer);
 
 				printTypesMap.put(expressionString, startPosition);
@@ -780,8 +787,7 @@ class FirstASTVisitor extends ASTVisitor
 		ArrayList<NodeJSON> graphNodes = new ArrayList<NodeJSON>();
 		//if(graphNodes == null)
 		graphNodes = model.getMethodParams(me, methodParameterCache);
-
-
+		
 		if(graphNodes.size() != params.size())
 			return false;
 		if(params.size()==0 && graphNodes.size()==0)
@@ -791,7 +797,7 @@ class FirstASTVisitor extends ASTVisitor
 		for(ASTNode param : params)
 		{
 			HashSet<String> possibleTypes = new HashSet<String>();
-			if(param.getNodeType()==34)
+			if(param.getNodeType() == ASTNode.NUMBER_LITERAL)
 			{
 				possibleTypes.add("int");
 				possibleTypes.add("byte");
@@ -800,20 +806,20 @@ class FirstASTVisitor extends ASTVisitor
 				possibleTypes.add("long");
 				possibleTypes.add("short");
 			}
-			else if(param.getNodeType()==9)
+			else if(param.getNodeType() == ASTNode.BOOLEAN_LITERAL)
 			{
 				possibleTypes.add("boolean");
 			}
-			else if(param.getNodeType()==13)
+			else if(param.getNodeType() == ASTNode.CHARACTER_LITERAL)
 			{
 				possibleTypes.add("char");
 			}
-			else if(param.getNodeType()==27)
+			else if(param.getNodeType() == ASTNode.INFIX_EXPRESSION)
 			{
 				InfixExpression tempNode = (InfixExpression) param;
-				if(tempNode.getLeftOperand().getNodeType() == 45 || tempNode.getRightOperand().getNodeType() == 45)
+				if(tempNode.getLeftOperand().getNodeType() == ASTNode.STRING_LITERAL || tempNode.getRightOperand().getNodeType() == ASTNode.STRING_LITERAL)
 					possibleTypes.add("String");
-				else if(tempNode.getLeftOperand().getNodeType() == 34 || tempNode.getRightOperand().getNodeType() == 34)
+				else if(tempNode.getLeftOperand().getNodeType() == ASTNode.NUMBER_LITERAL || tempNode.getRightOperand().getNodeType() == ASTNode.NUMBER_LITERAL)
 				{
 					possibleTypes.add("int");
 					possibleTypes.add("byte");
@@ -825,11 +831,11 @@ class FirstASTVisitor extends ASTVisitor
 				else
 					possibleTypes.add("UNKNOWN");
 			}
-			else if(param.getNodeType()==45)
+			else if(param.getNodeType() == ASTNode.STRING_LITERAL)
 			{
 				possibleTypes.add("String");
 			}
-			else if (param.getNodeType()==42)
+			else if (param.getNodeType() == ASTNode.SIMPLE_NAME)
 			{
 				if(variableTypeMap.containsKey(param.toString()))
 				{
@@ -849,7 +855,7 @@ class FirstASTVisitor extends ASTVisitor
 					possibleTypes.add("UNKNOWN");
 				}
 			}
-			else if(param.getNodeType()==32)
+			else if(param.getNodeType() == ASTNode.METHOD_INVOCATION)
 			{
 				if(methodReturnTypesMap.containsKey(param.toString()))
 				{
@@ -869,7 +875,7 @@ class FirstASTVisitor extends ASTVisitor
 					possibleTypes.add("UNKNOWN");
 				}
 			}
-			else if(param.getNodeType()==14)
+			else if(param.getNodeType() == ASTNode.CLASS_INSTANCE_CREATION)
 			{
 				ClassInstanceCreation tempNode = (ClassInstanceCreation) param;
 				possibleTypes.add(tempNode.getType().toString());
@@ -926,7 +932,7 @@ class FirstASTVisitor extends ASTVisitor
 		classNames.push(treeNode.getName().toString());
 		if(treeNode.getSuperclassType()!=null)
 		{
-			if(treeNode.getSuperclassType().getNodeType()==74)
+			if(treeNode.getSuperclassType().getNodeType() == ASTNode.PARAMETERIZED_TYPE)
 			{
 				superclassname = ((ParameterizedType)treeNode.getSuperclassType()).getType().toString();
 			}
@@ -966,7 +972,7 @@ class FirstASTVisitor extends ASTVisitor
 			}
 
 			String parameterType = null;
-			if(param.get(i).getType().getNodeType()==74)
+			if(param.get(i).getType().getNodeType() == ASTNode.PARAMETERIZED_TYPE)
 				parameterType = ((ParameterizedType)param.get(i).getType()).getType().toString();
 			else
 				parameterType = param.get(i).getType().toString();
@@ -1265,7 +1271,7 @@ class FirstASTVisitor extends ASTVisitor
 				}
 			});
 		}
-		String treeNodeString= treeNode.toString();
+		String treeNodeString = treeNode.toString();
 		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
 		int startPosition = treeNode.getType().getStartPosition();
 		printMethodsMap.put(treeNodeString, startPosition);
@@ -1303,7 +1309,7 @@ class FirstASTVisitor extends ASTVisitor
 				}
 			}
 		}
-		if(treeNode.getParent().getNodeType() == 59)
+		if(treeNode.getParent().getNodeType() == ASTNode.VARIABLE_DECLARATION_FRAGMENT)
 		{
 			VariableDeclarationFragment lhs = ((VariableDeclarationFragment) treeNode.getParent());
 
