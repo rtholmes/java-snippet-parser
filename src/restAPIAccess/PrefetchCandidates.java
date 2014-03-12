@@ -370,7 +370,7 @@ class PrefetchCandidates extends ASTVisitor
 		{
 			if(!processedMethods.contains(exactName))
 			{
-				ThreadedMethodFetch tmf = new ThreadedMethodFetch(exactName, allMethodsInClass, methodContainerCache, methodReturnCache, methodParameterCache, model);
+				ThreadedMethodFetch tmf = new ThreadedMethodFetch(exactName, candidateMethodNodesCache, methodContainerCache, methodReturnCache, methodParameterCache, model);
 				methodFetchExecutor.execute(tmf);
 				processedMethods.add(exactName);
 			}
