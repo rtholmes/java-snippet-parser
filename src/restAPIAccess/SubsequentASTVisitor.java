@@ -15,6 +15,7 @@ import java.util.TreeSet;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 
 
+import Node.IndexHits;
 import Node.NodeJSON;
 import RestAPI.GraphServerAccess;
 
@@ -41,6 +42,7 @@ class SubsequentASTVisitor extends ASTVisitor
 	public HashMap<NodeJSON, ArrayList<NodeJSON>> methodParameterCache;
 	public HashMap<String, ArrayList<NodeJSON>> parentNodeCache;
 	private HashMap<String, ArrayList<ArrayList<NodeJSON>>> shortClassShortMethodCache;
+	private HashMap<String, IndexHits<NodeJSON>> allMethodsInClass; //FQ classId -> list of methods
 	
 	public GraphServerAccess model;
 	public CompilationUnit cu;
@@ -76,6 +78,7 @@ class SubsequentASTVisitor extends ASTVisitor
 
 	public SubsequentASTVisitor(FirstASTVisitor previousVisitor) 
 	{
+		
 		model = previousVisitor.model;
 		cu = previousVisitor.cu;
 		cutype = previousVisitor.cutype;
@@ -92,6 +95,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		methodContainerCache = new HashMap<NodeJSON, NodeJSON>(previousVisitor.methodContainerCache);
 		methodReturnCache = new HashMap<NodeJSON, NodeJSON>(previousVisitor.methodReturnCache);
 		parentNodeCache = new HashMap<String, ArrayList<NodeJSON>>(previousVisitor.parentNodeCache);
+		allMethodsInClass = new HashMap<String, IndexHits<NodeJSON>>(previousVisitor.allMethodsInClass);
 		tolerance = previousVisitor.tolerance;
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;
 		localMethods = HashMultimap.create(previousVisitor.localMethods);
@@ -121,6 +125,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		methodReturnCache = new HashMap<NodeJSON, NodeJSON>(previousVisitor.methodReturnCache);
 		parentNodeCache = new HashMap<String, ArrayList<NodeJSON>>(previousVisitor.parentNodeCache);
 		shortClassShortMethodCache = new HashMap<String, ArrayList<ArrayList<NodeJSON>>>(previousVisitor.shortClassShortMethodCache);
+		allMethodsInClass = new HashMap<String, IndexHits<NodeJSON>>(previousVisitor.allMethodsInClass);
 		tolerance = previousVisitor.tolerance;
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;
 		localMethods = HashMultimap.create(previousVisitor.localMethods);

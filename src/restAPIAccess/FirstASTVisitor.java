@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
@@ -72,6 +73,7 @@ class FirstASTVisitor extends ASTVisitor
 	public ArrayList<Object> interfaces;
 	public int tolerance;
 	public int MAX_CARDINALITY;
+	public HashMap<String, IndexHits<NodeJSON>> allMethodsInClass;
 
 	public FirstASTVisitor(GraphServerAccess db, CompilationUnit cu, int cutype, int tolerance, int max_cardinality) 
 	{
@@ -80,15 +82,47 @@ class FirstASTVisitor extends ASTVisitor
 		this.cutype = cutype;
 		this.tolerance = tolerance;
 		MAX_CARDINALITY = max_cardinality;
-		initializeFields();
+		initializeAllFields();
 		fetchLocalClassesAndMethods(cu);
 	}
 
+	public FirstASTVisitor(PrefetchCandidates prefetch_visitor)
+	{
+		model = prefetch_visitor.model;
+		cu = prefetch_visitor.cu;
+		cutype = prefetch_visitor.cutype;
+		tolerance = prefetch_visitor.tolerance;
+		MAX_CARDINALITY = prefetch_visitor.MAX_CARDINALITY;
+		localMethods = prefetch_visitor.localMethods;
+		localClasses = prefetch_visitor.localClasses;
 
+		candidateClassNodesCache = prefetch_visitor.candidateClassNodesCache;
+		candidateMethodNodesCache = prefetch_visitor.candidateMethodNodesCache;
+		methodContainerCache = prefetch_visitor.methodContainerCache;
+		methodReturnCache = prefetch_visitor.methodReturnCache;
+		methodParameterCache = prefetch_visitor.methodParameterCache;
+		parentNodeCache = prefetch_visitor.parentNodeCache;
+		shortClassShortMethodCache = prefetch_visitor.shortClassShortMethodCache;
+		allMethodsInClass = prefetch_visitor.allMethodsInClass;
+		
+		classNames = prefetch_visitor.classNames;
+		superclassname = prefetch_visitor.superclassname;
+		interfaces = prefetch_visitor.interfaces;
+
+		variableTypeMap = new HashMap<String, HashMultimap<ArrayList<Integer>,NodeJSON>>();
+		methodReturnTypesMap = new HashMap<String, HashMultimap<ArrayList<Integer>,NodeJSON>>();
+		printtypes = HashMultimap.create();
+		printmethods = HashMultimap.create();
+		printTypesMap = new HashMap<String, Integer>();
+		printMethodsMap = new HashMap<String, Integer>();
+		importList = new HashSet<String>();
+
+		
+	}
 	/*
 	 * Initialize fields in the FirstASTVisitor class
 	 */
-	private void initializeFields()
+	private void initializeAllFields()
 	{
 		localMethods = HashMultimap.create();
 		localClasses = new HashSet<String>();
@@ -107,7 +141,8 @@ class FirstASTVisitor extends ASTVisitor
 		methodParameterCache = new HashMap<NodeJSON, ArrayList<NodeJSON>>();
 		parentNodeCache = new HashMap<String, ArrayList<NodeJSON>>();
 		shortClassShortMethodCache = new HashMap<String, ArrayList<ArrayList<NodeJSON>>>();
-
+		allMethodsInClass = new HashMap<String, IndexHits<NodeJSON>>();
+		
 		importList = new HashSet<String>();
 		classNames = new Stack<String>();
 		superclassname = new String();

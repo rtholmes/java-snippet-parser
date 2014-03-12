@@ -9,6 +9,7 @@ import RestAPI.GraphServerAccess;
 import RestAPI.Logger;
 
 import java.sql.SQLException;
+import java.util.concurrent.TimeUnit;
 
 
 public class JavaBaker
@@ -40,7 +41,24 @@ public class JavaBaker
 
 	static JSONObject vistAST(GraphServerAccess db, CompilationUnit cu, int cutype, int tolerance, int max_cardinality)
 	{
-		FirstASTVisitor first_visitor = new FirstASTVisitor(db,cu,cutype, tolerance, max_cardinality);
+		///*
+		 
+		PrefetchCandidates prefetch_visitor = new PrefetchCandidates(db,cu,cutype, tolerance, max_cardinality);
+		cu.accept(prefetch_visitor);
+		prefetch_visitor.classFetchExecutor.shutdown();
+		prefetch_visitor.methodFetchExecutor.shutdown();
+		while(prefetch_visitor.classFetchExecutor.isTerminated()==false || prefetch_visitor.methodFetchExecutor.isTerminated()==false)
+		{
+			//wait
+		}
+		
+		System.out.println("@@worked!");
+		System.out.println(prefetch_visitor.candidateClassNodesCache.keySet().size() + " : " + prefetch_visitor.candidateMethodNodesCache.keySet().size());
+	    System.out.println("Finished all threads");
+	    
+	    FirstASTVisitor first_visitor = new FirstASTVisitor(prefetch_visitor);
+	    //*/
+		//FirstASTVisitor first_visitor = new FirstASTVisitor(db,cu,cutype, tolerance, max_cardinality);
 		cu.accept(first_visitor);
 		System.out.println(first_visitor.printJson().toString(3));
 		first_visitor.printFields();
