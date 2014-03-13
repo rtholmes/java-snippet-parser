@@ -548,7 +548,7 @@ class FirstASTVisitor extends ASTVisitor
 				}
 				getMethodContainerExecutor.shutdown();
 				getMethodReturnExecutor.shutdown();
-				while(getMethodContainerExecutor.isShutdown() == false && getMethodReturnExecutor.isShutdown()==false)
+				while(getMethodContainerExecutor.isTerminated() == false || getMethodReturnExecutor.isTerminated()==false)
 				{
 					
 				}
@@ -805,7 +805,7 @@ class FirstASTVisitor extends ASTVisitor
 			}
 			getMethodContainerExecutor.shutdown();
 			getMethodReturnExecutor.shutdown();
-			while(getMethodContainerExecutor.isShutdown() == false && getMethodReturnExecutor.isShutdown()==false)
+			while(getMethodContainerExecutor.isTerminated() == false || getMethodReturnExecutor.isTerminated()==false)
 			{
 				
 			}
