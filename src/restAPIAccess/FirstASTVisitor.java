@@ -2,12 +2,14 @@ package restAPIAccess;
 
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -434,6 +436,69 @@ class FirstASTVisitor extends ASTVisitor
 		}
 	}
 
+	public void helper(NodeJSON candidateClassNode,
+		MethodInvocation treeNode,
+		int startPosition,
+		ArrayList<NodeJSON> replacementClassNodesList,
+		HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator,
+		ArrayList<Integer> scopeArray)
+	{
+		ArrayList<NodeJSON> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, treeNode.getName().toString(), candidateMethodNodesCache);
+		
+		int hasCandidateFlag = 0;
+		ExecutorService getMethodReturnExecutor = Executors.newFixedThreadPool(NThreads);
+		
+		for(NodeJSON candidateMethodNode : candidateMethodNodes)
+		{
+			String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
+			if((candidateMethodExactName).equals( treeNode.getName().toString()))
+			{
+				if(matchParams(candidateMethodNode, treeNode.arguments())==true)
+				{
+					printmethods.put(startPosition, candidateMethodNode);
+					replacementClassNodesList.add(candidateClassNode);
+					ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+					getMethodReturnExecutor.execute(tmrf);
+					//hasCandidateFlag = 1;
+				}
+			}
+		}
+		getMethodReturnExecutor.shutdown();
+		while(!getMethodReturnExecutor.isShutdown())
+		{
+			
+		}
+		if(hasCandidateFlag == 0)
+		{
+			ArrayList<NodeJSON> parentNodeList = model.getParents(candidateClassNode, parentNodeCache);
+			parentNodeList = getNewClassElementsList(parentNodeList);
+			getMethodReturnExecutor = Executors.newFixedThreadPool(NThreads);
+			for(NodeJSON parentNode: parentNodeList)
+			{
+				ArrayList<NodeJSON> methodNodes = model.getMethodNodesInClassNode(parentNode, treeNode.getName().toString(), candidateMethodNodesCache);
+				for(NodeJSON candidateMethodNode : methodNodes)
+				{
+					String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
+					if(candidateMethodExactName.equals(treeNode.getName().toString()))
+					{
+						if(matchParams(candidateMethodNode, treeNode.arguments())==true)
+						{
+							printmethods.put(startPosition, candidateMethodNode);
+							replacementClassNodesList.add(parentNode);
+							ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+							getMethodReturnExecutor.execute(tmrf);
+						}
+					}
+				}
+			}
+			getMethodReturnExecutor.shutdown();
+			while(!getMethodReturnExecutor.isShutdown())
+			{
+				
+			}
+		}
+	}
+	
 	public void endVisit(MethodInvocation treeNode)
 	{
 		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
@@ -472,10 +537,11 @@ class FirstASTVisitor extends ASTVisitor
 				if(!isLocalClass(superclassname))
 					candidateSuperClassNodes = model.getCandidateClassNodes(superclassname, candidateClassNodesCache);
 
-				
 				candidateSuperClassNodes = getNewClassElementsList(candidateSuperClassNodes);
+				
 				for(NodeJSON candidateSuperClass : candidateSuperClassNodes)
 				{
+					
 					ArrayList<NodeJSON> candidateMethods = new ArrayList<NodeJSON>();
 					ArrayList<NodeJSON> candidateSuperClassMethods = model.getMethodNodesInClassNode(candidateSuperClass, treeNodeMethodExactName, candidateMethodNodesCache);
 					for(NodeJSON node : candidateSuperClassMethods)
@@ -534,7 +600,6 @@ class FirstASTVisitor extends ASTVisitor
 				ExecutorService getMethodReturnExecutor = Executors.newFixedThreadPool(NThreads);
 				for(NodeJSON candidateMethodNode : candidateMethodNodes)
 				{
-					//here
 					if(matchParams(candidateMethodNode, treeNode.arguments())==true)
 					{
 						printmethods.put(startPosition, candidateMethodNode);
@@ -595,62 +660,12 @@ class FirstASTVisitor extends ASTVisitor
 			{
 				candidateAccumulator = HashMultimap.create();
 			}
+			
 			for(NodeJSON candidateClassNode : candidateClassNodes)
 			{
-				ArrayList<NodeJSON> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode,treeNodeMethodExactName, candidateMethodNodesCache);
 				
-				int hasCandidateFlag = 0;
-				for(NodeJSON candidateMethodNode : candidateMethodNodes)
-				{
-					String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
-					if((candidateMethodExactName).equals(treeNodeMethodExactName))
-					{
-						if(matchParams(candidateMethodNode, treeNode.arguments())==true)
-						{
-							printmethods.put(startPosition, candidateMethodNode);
-							//NodeJSON fcname = model.getMethodContainer(candidateMethodNode, methodContainerCache);
-							NodeJSON fcname = candidateClassNode;
-							if(fcname!=null)
-								replacementClassNodesList.add(fcname);
-							NodeJSON retElement = model.getMethodReturn(candidateMethodNode, methodReturnCache);
-							if(retElement!=null)
-							{
-								candidateAccumulator.put(scopeArray, retElement);
-							}
-							//hasCandidateFlag = 1;
-						}
-					}
-				}
-				if(hasCandidateFlag == 0)
-				{
-					ArrayList<NodeJSON> parentNodeList = model.getParents(candidateClassNode, parentNodeCache);
-					parentNodeList = getNewClassElementsList(parentNodeList);
-					for(NodeJSON parentNode: parentNodeList)
-					{
-						//ArrayList<NodeJSON> methodNodes = model.getMethodNodes(parentNode, methodNodesInClassNode);
-						ArrayList<NodeJSON> methodNodes = model.getMethodNodesInClassNode(parentNode, treeNodeMethodExactName, candidateMethodNodesCache);
-						for(NodeJSON methodNode : methodNodes)
-						{
-							String candidateMethodExactName = (String)methodNode.getProperty("exactName");
-							if(candidateMethodExactName.equals(treeNodeMethodExactName))
-							{
-								if(matchParams(methodNode, treeNode.arguments())==true)
-								{
-									printmethods.put(startPosition, methodNode);
-									NodeJSON fcname = parentNode;
-									//NodeJSON fcname = model.getMethodContainer(methodNode, methodContainerCache);
-									if(fcname != null)
-										replacementClassNodesList.add(fcname);
-									NodeJSON retElement = model.getMethodReturn(methodNode, methodReturnCache);
-									if(retElement != null)
-									{
-										candidateAccumulator.put(scopeArray, retElement);
-									}
-								}
-							}
-						}
-					}
-				}
+				ArrayList<NodeJSON> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode,treeNodeMethodExactName, candidateMethodNodesCache);
+				helper(candidateClassNode, treeNode, startPosition, candidateMethodNodes, candidateAccumulator, rightScopeArray);
 			}
 			methodReturnTypesMap.put(treeNodeString, candidateAccumulator);
 
