@@ -365,7 +365,7 @@ class PrefetchCandidates extends ASTVisitor
 
 	public void endVisit(MethodInvocation treeNode)
 	{
-		String exactName = treeNode.getName().toString();
+		/*String exactName = treeNode.getName().toString();
 		if(!isLocalMethod(exactName, treeNode.getExpression()))
 		{
 			if(!processedMethods.contains(exactName))
@@ -374,13 +374,13 @@ class PrefetchCandidates extends ASTVisitor
 				methodFetchExecutor.execute(tmf);
 				processedMethods.add(exactName);
 			}
-		}
+		}*/
 		
 	}
 	
 	public void endVisit(SuperMethodInvocation treeNode)
 	{
-		if(!isLocalClass(superclassname))
+		/*if(!isLocalClass(superclassname))
 		{
 			if(!processedClasses.contains(superclassname))
 			{
@@ -389,7 +389,7 @@ class PrefetchCandidates extends ASTVisitor
 				//model.getCandidateClassNodes(superclassname, candidateClassNodesCache);
 				processedClasses.add(superclassname);
 			}
-		}
+		}*/
 	}
 
 	public boolean visit(final ClassInstanceCreation treeNode)
