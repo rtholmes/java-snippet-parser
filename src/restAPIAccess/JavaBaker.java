@@ -9,7 +9,6 @@ import RestAPI.GraphServerAccess;
 import RestAPI.Logger;
 
 import java.sql.SQLException;
-import java.util.concurrent.TimeUnit;
 
 
 public class JavaBaker
@@ -21,7 +20,7 @@ public class JavaBaker
 		String input_oracle = "http://gadget.cs:7474/db/data";
 		String input_file = "sample.txt";
 		int tolerance = 3;
-		int max_cardinality = 10;
+		int max_cardinality = 20;
 		Parser parser = new Parser(input_oracle, input_file);
 		CompilationUnit cu = parser.getCompilationUnitFromFile();
 		int cutype = parser.getCuType();

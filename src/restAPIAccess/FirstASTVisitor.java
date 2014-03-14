@@ -599,7 +599,6 @@ class FirstASTVisitor extends ASTVisitor
 				candidateAccumulator = HashMultimap.create();
 			}
 
-
 			List<NodeJSON> candidateMethodNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
 			List<NodeJSON> candidateParentNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
 
@@ -608,7 +607,7 @@ class FirstASTVisitor extends ASTVisitor
 
 			for(NodeJSON candidateClassNode : candidateClassNodes)
 			{
-				ThreadedMethodsInClassFetch tmicf = new ThreadedMethodsInClassFetch(candidateClassNode, treeNode, candidateMethodNodes, candidateMethodNodesCache, methodContainerCache ,model);
+				ThreadedMethodsInClassFetch tmicf = new ThreadedMethodsInClassFetch(candidateClassNode, treeNode.getName().toString(), candidateMethodNodes, candidateMethodNodesCache, methodContainerCache ,model);
 				getMethodsInClass.execute(tmicf);
 
 				//ThreadedParentFetch tpf = new ThreadedParentFetch(candidateClassNode, treeNode, candidateParentNodes, parentNodeCache, model);
@@ -1088,26 +1087,49 @@ class FirstASTVisitor extends ASTVisitor
 			if(!isLocalClass(superclassname))
 				candidateClassNodes = model.getCandidateClassNodes(superclassname, candidateClassNodesCache);
 			candidateClassNodes = getNewClassElementsList(candidateClassNodes);
+			
+			//** refactor start
+			
+			List<NodeJSON> candidateMethodNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
+			ExecutorService getMethodsInClass = Executors.newFixedThreadPool(NThreads);
+
 			for(NodeJSON candidateClassNode : candidateClassNodes)
 			{
-				//Collection<NodeJSON> candidateMethodNodes=model.getMethodNodes(candidateClassNode, methodNodesInClassNode);
-				ArrayList<NodeJSON> candidateMethodNodes = model.getMethodNodesInClassNode(candidateClassNode, treeNode.getName().toString(), candidateMethodNodesCache);
-				for(NodeJSON candidateMethodNode : candidateMethodNodes)
+				ThreadedMethodsInClassFetch tmicf = new ThreadedMethodsInClassFetch(candidateClassNode, treeNode.getName().toString(), candidateMethodNodes, candidateMethodNodesCache, methodContainerCache ,model);
+				getMethodsInClass.execute(tmicf);
+			}
+			getMethodsInClass.shutdown();
+			while(getMethodsInClass.isTerminated() == false)
+			{
+			}
+			
+			ExecutorService getMethodContainerExecutor = Executors.newFixedThreadPool(NThreads);
+			List<NodeJSON> methodContainerList = Collections.synchronizedList(new ArrayList<NodeJSON>()); 
+			
+			
+			for(NodeJSON candidateMethodNode : candidateMethodNodes)
+			{
+				String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
+				if((candidateMethodExactName).equals( treeNode.getName().toString()))
 				{
-					String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
-					if(candidateMethodExactName.equals(treeNode.getName().toString()))
+					if(matchParams(candidateMethodNode, treeNode.parameters())==true)
 					{
-						if(matchParams(candidateMethodNode, treeNode.parameters())==true)
-						{
-							NodeJSON parentNode = candidateClassNode;
-							if(candidateMethodNodes.size() < tolerance)
-								addCorrespondingImport(parentNode.getProperty("id").toString());
-							printtypes.put(startPosition, parentNode);
-							printmethods.put(startPosition, candidateMethodNode);
-						}	
+						printmethods.put(startPosition, candidateMethodNode);
+						ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(candidateMethodNode, methodContainerCache, methodContainerList, model);
+						getMethodContainerExecutor.execute(tmcf);
 					}
 				}
 			}
+			getMethodContainerExecutor.shutdown();
+			while(getMethodContainerExecutor.isTerminated() == false)
+			{
+				
+			}
+			for(NodeJSON methodContainer : methodContainerList)
+			{
+				printtypes.put(startPosition, methodContainer);
+			}
+			//** refactor ends
 		}
 
 		if(!interfaces.isEmpty())
