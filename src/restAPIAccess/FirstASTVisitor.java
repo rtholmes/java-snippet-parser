@@ -123,9 +123,8 @@ class FirstASTVisitor extends ASTVisitor
 		printTypesMap = new HashMap<String, Integer>();
 		printMethodsMap = new HashMap<String, Integer>();
 		importList = new HashSet<String>();
-
-
 	}
+	
 	/*
 	 * Initialize fields in the FirstASTVisitor class
 	 */
@@ -849,6 +848,7 @@ class FirstASTVisitor extends ASTVisitor
 		}
 	}
 
+	//Max parallel
 	private ArrayList<Integer> getNodeSet(HashMultimap<ArrayList<Integer>, NodeJSON> celist2, ArrayList<Integer> scopeArray) 
 	{
 		for(ArrayList<Integer> test : celist2.keySet())
@@ -859,6 +859,7 @@ class FirstASTVisitor extends ASTVisitor
 		return null;
 	}
 
+	//Max parallel
 	private boolean isSubset(ArrayList<Integer> test,ArrayList<Integer> scopeArray) 
 	{
 		if(scopeArray.containsAll(test.subList(1, test.size())))
@@ -869,6 +870,7 @@ class FirstASTVisitor extends ASTVisitor
 			return false;
 	}
 
+	//Max parallel
 	private boolean matchParams(NodeJSON me, List<ASTNode> params) 
 	{
 		ArrayList<HashSet<String>> nodeArgs = new ArrayList<HashSet<String>>();
@@ -1015,6 +1017,7 @@ class FirstASTVisitor extends ASTVisitor
 		return true;
 	}
 
+	//Max parallel
 	public boolean visit(TypeDeclaration treeNode)
 	{
 		classNames.push(treeNode.getName().toString());
@@ -1333,7 +1336,6 @@ class FirstASTVisitor extends ASTVisitor
 		methodReturnTypesMap.put(treeNodeString, candidateAccumulator);
 	}
 
-	
 	//Max parallel
 	public void endVisit(SuperMethodInvocation treeNode)
 	{
@@ -1537,6 +1539,7 @@ class FirstASTVisitor extends ASTVisitor
 		return true;
 	}
 
+	//Max parallel
 	public void endVisit(ClassInstanceCreation treeNode)
 	{	
 		/*System.out.println("here -- ClassInstanceCreation");
@@ -1568,6 +1571,7 @@ class FirstASTVisitor extends ASTVisitor
 
 	}
 
+	//Max parallel
 	public boolean visit(CastExpression node)
 	{
 		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
@@ -1611,6 +1615,7 @@ class FirstASTVisitor extends ASTVisitor
 		return true;
 	}
 
+	//Max parallel
 	public void endVisit(Assignment node)
 	{
 		String lhs,rhs;
@@ -1652,6 +1657,7 @@ class FirstASTVisitor extends ASTVisitor
 		}
 	}
 
+	//Max parallel
 	public boolean visit(ImportDeclaration node)
 	{
 
@@ -1664,6 +1670,7 @@ class FirstASTVisitor extends ASTVisitor
 		return true;
 	}
 
+	//Max parallel
 	public JSONObject printJson()
 	{
 		checkForNull();
@@ -1757,6 +1764,7 @@ class FirstASTVisitor extends ASTVisitor
 		}
 	}
 
+	//Max parallel
 	public void checkForNull()
 	{
 		for(Integer key : printtypes.keySet())
