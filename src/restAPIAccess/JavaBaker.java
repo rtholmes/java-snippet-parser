@@ -48,7 +48,7 @@ public class JavaBaker
 		prefetch_visitor.methodFetchExecutor.shutdown();
 		while(prefetch_visitor.classFetchExecutor.isTerminated() == false || prefetch_visitor.methodFetchExecutor.isTerminated() == false)
 		{
-			//wait
+			
 		}
 		
 		System.out.println("@@worked!");

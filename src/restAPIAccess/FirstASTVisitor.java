@@ -328,6 +328,8 @@ class FirstASTVisitor extends ASTVisitor
 	 * @see org.eclipse.jdt.core.dom.ASTVisitor#visit(org.eclipse.jdt.core.dom.VariableDeclarationStatement)
 	 * Extracts candidate classes for variables and populates the maps accordingly 
 	 */
+	
+	//Max Parallel
 	public void endVisit(VariableDeclarationStatement treeNode)
 	{
 		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
@@ -366,6 +368,7 @@ class FirstASTVisitor extends ASTVisitor
 		}
 	}
 
+	//Max Parallel
 	public boolean visit(EnhancedForStatement treeNode)
 	{
 		ArrayList<Integer> scopeArray = getScopeArray(treeNode.getParent());
@@ -400,7 +403,7 @@ class FirstASTVisitor extends ASTVisitor
 		return true;
 	}
 
-
+	//Max Parallel
 	public void endVisit(FieldDeclaration treeNode) 
 	{
 		int startPosition = treeNode.getType().getStartPosition();
@@ -438,6 +441,7 @@ class FirstASTVisitor extends ASTVisitor
 		}
 	}
 
+	//Max Parallel
 	public void endVisit(MethodInvocation treeNode)
 	{
 		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
@@ -462,11 +466,14 @@ class FirstASTVisitor extends ASTVisitor
 
 		if(expression == null)
 		{
+			//Max Parallel
 			if(!superclassname.isEmpty())
 			{
 				/*
 				 * Handles inheritance, where methods from Superclasses can be directly called
 				 */
+				
+				
 				HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator = null;
 				if(methodReturnTypesMap.containsKey(treeNodeString))
 					candidateAccumulator = methodReturnTypesMap.get(treeNodeString);
@@ -478,46 +485,93 @@ class FirstASTVisitor extends ASTVisitor
 
 				candidateSuperClassNodes = getNewClassElementsList(candidateSuperClassNodes);
 
-				for(NodeJSON candidateSuperClass : candidateSuperClassNodes)
+				ArrayList<NodeJSON> replacementClassNodesList = new ArrayList<NodeJSON>();
+				List<NodeJSON> candidateMethodNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
+				List<NodeJSON> candidateParentNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
+
+				ExecutorService getMethodsInClass = Executors.newFixedThreadPool(NThreads);
+				ExecutorService getParentClass = Executors.newFixedThreadPool(NThreads);
+
+				for(NodeJSON candidateSuperClassNode : candidateSuperClassNodes)
 				{
+					ThreadedMethodsInClassFetch tmicf = new ThreadedMethodsInClassFetch(candidateSuperClassNode, treeNode.getName().toString(), candidateMethodNodes, candidateMethodNodesCache, methodContainerCache ,model);
+					getMethodsInClass.execute(tmicf);
 
-					ArrayList<NodeJSON> candidateMethods = new ArrayList<NodeJSON>();
-					ArrayList<NodeJSON> candidateSuperClassMethods = model.getMethodNodesInClassNode(candidateSuperClass, treeNodeMethodExactName, candidateMethodNodesCache);
-					for(NodeJSON node : candidateSuperClassMethods)
+					//ThreadedParentFetch tpf = new ThreadedParentFetch(candidateClassNode, treeNode, candidateParentNodes, parentNodeCache, model);
+					//getParentClass.execute(tpf);
+
+				}
+				getMethodsInClass.shutdown();
+				while(getMethodsInClass.isTerminated() == false)
+				{
+				}
+				int hasCandidateFlag = 0;
+				ExecutorService getMethodReturnExecutor = Executors.newFixedThreadPool(NThreads);
+				ExecutorService getMethodContainerExecutor = Executors.newFixedThreadPool(NThreads);
+				for(NodeJSON candidateMethodNode : candidateMethodNodes)
+				{
+					String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
+					if((candidateMethodExactName).equals( treeNode.getName().toString()))
 					{
-						candidateMethods.add(node);
-					}
-					ArrayList<NodeJSON> candidateSuperClassParents = model.getParents(candidateSuperClass, parentNodeCache);
-					for(NodeJSON candidateSuperClassParent : candidateSuperClassParents)
-					{
-						ArrayList<NodeJSON> candidateSuperClassParentsMethods = model.getMethodNodesInClassNode(candidateSuperClassParent, treeNodeMethodExactName, candidateMethodNodesCache);
-						for(NodeJSON node : candidateSuperClassParentsMethods)
+						if(matchParams(candidateMethodNode, treeNode.arguments())==true)
 						{
-							candidateMethods.add(node);
-						}
-					}
-
-					for(NodeJSON candidateSuperClassMethod : candidateMethods)
-					{
-						String candidateMethodExactName = (String)candidateSuperClassMethod.getProperty("exactName");
-						if(candidateMethodExactName.equals(treeNodeMethodExactName))
-						{
-							if(matchParams(candidateSuperClassMethod, treeNode.arguments())==true)
-							{
-								if(candidateSuperClassNodes.size() < tolerance)
-									addCorrespondingImport(candidateSuperClass.getProperty("id").toString());
-
-								printtypes.put(startPosition, candidateSuperClass);
-								printmethods.put(startPosition, candidateSuperClassMethod);
-								NodeJSON retElement = model.getMethodReturn(candidateSuperClassMethod, methodReturnCache);
-								if(retElement!=null)
-									candidateAccumulator.put(scopeArray, retElement);
-							}
+							printmethods.put(startPosition, candidateMethodNode);
+							ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(candidateMethodNode, methodContainerCache, replacementClassNodesList, model);
+							getMethodContainerExecutor.execute(tmcf);
+							ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+							getMethodReturnExecutor.execute(tmrf);
+							hasCandidateFlag = 1;
 						}
 					}
 				}
+
+				getParentClass.shutdown();
+				while(getParentClass.isTerminated() == false)
+				{
+
+				}
+
+				getMethodReturnExecutor.shutdown();
+				getMethodContainerExecutor.shutdown();
+				while(getMethodReturnExecutor.isTerminated() == false || getMethodContainerExecutor.isTerminated() == false)
+				{
+
+				}
+				candidateParentNodes = getNewClassElementsList(candidateParentNodes);
+				if(hasCandidateFlag == 0)
+				{
+					getMethodReturnExecutor = Executors.newFixedThreadPool(NThreads);
+					System.out.println("--% " + candidateParentNodes.size() + " + " + treeNode.getName().toString());
+					for(NodeJSON parentNode: candidateParentNodes)
+					{
+						ArrayList<NodeJSON> methodNodes = model.getMethodNodesInClassNode(parentNode, treeNode.getName().toString(), candidateMethodNodesCache);
+						for(NodeJSON candidateMethodNode : methodNodes)
+						{
+							String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
+							if(candidateMethodExactName.equals(treeNode.getName().toString()))
+							{
+								if(matchParams(candidateMethodNode, treeNode.arguments())==true)
+								{
+									printmethods.put(startPosition, candidateMethodNode);
+									replacementClassNodesList.add(parentNode);
+									ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+									getMethodReturnExecutor.execute(tmrf);
+								}
+							}
+						}
+					}
+					getMethodReturnExecutor.shutdown();
+					while(!getMethodReturnExecutor.isTerminated())
+					{
+
+					}
+				}
+
 				methodReturnTypesMap.put(treeNodeString, candidateAccumulator);
+				printtypes.removeAll(printTypesMap.get(expressionString));
+				printtypes.putAll(printTypesMap.get(expressionString), replacementClassNodesList);
 			}
+			//Max Parallel
 			else
 			{
 				/*
@@ -578,6 +632,7 @@ class FirstASTVisitor extends ASTVisitor
 		{
 			//System.out.println("array method");
 		}
+		//Max Parallel
 		else if(variableTypeMap.containsKey(expressionString))
 		{
 			ArrayList<NodeJSON> replacementClassNodesList = new ArrayList<NodeJSON>();
@@ -803,7 +858,7 @@ class FirstASTVisitor extends ASTVisitor
 			{
 				candidateAccumulator = HashMultimap.create();
 			}
-			//goto
+
 			printMethodsMap.put(treeNodeString, startPosition);
 			ArrayList<NodeJSON> candidateMethodNodes = model.getCandidateMethodNodes(treeNodeMethodExactName, candidateMethodNodesCache);
 			ExecutorService getMethodContainerExecutor = Executors.newFixedThreadPool(NThreads);

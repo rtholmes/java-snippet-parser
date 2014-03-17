@@ -4,12 +4,16 @@ package restAPIAccess;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 import org.eclipse.jdt.core.dom.ASTVisitor;
@@ -18,6 +22,7 @@ import org.eclipse.jdt.core.dom.ASTVisitor;
 import Node.IndexHits;
 import Node.NodeJSON;
 import RestAPI.GraphServerAccess;
+import RestAPI.ThreadedMethodContainerFetch;
 
 import com.google.common.collect.HashMultimap;
 
@@ -44,6 +49,7 @@ class SubsequentASTVisitor extends ASTVisitor
 	private HashMap<String, ArrayList<ArrayList<NodeJSON>>> shortClassShortMethodCache;
 	private HashMap<String, IndexHits<NodeJSON>> allMethodsInClass; //FQ classId -> list of methods
 	
+	private int NThreads = 10;
 	public GraphServerAccess model;
 	public CompilationUnit cu;
 	public int cutype;
@@ -103,7 +109,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		shortClassShortMethodCache = new HashMap<String, ArrayList<ArrayList<NodeJSON>>>(previousVisitor.shortClassShortMethodCache);
 		removeClustersIfAny();
 		updateImports();
-		upDateBasedOnImports();
+		updateBasedOnImports();
 	}
 	
 	public SubsequentASTVisitor(SubsequentASTVisitor previousVisitor) 
@@ -132,7 +138,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		localClasses = new HashSet<String>(previousVisitor.localClasses);
 		removeClustersIfAny();
 		updateImports();
-		upDateBasedOnImports();
+		updateBasedOnImports();
 	}
 	
 	public void updateImports()
@@ -149,16 +155,24 @@ class SubsequentASTVisitor extends ASTVisitor
 		
 		for(Integer key : printmethods.keySet())
 		{
-			HashSet<String> repl = new HashSet<String>();
 			Set<NodeJSON> temp = printmethods.get(key);
+			List<NodeJSON> parentNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
+			ExecutorService getMethodContainerExecutor = Executors.newFixedThreadPool(NThreads);
+			
 			for(NodeJSON node : temp)
 			{
-				NodeJSON parent = model.getMethodContainer(node, methodContainerCache);
-				repl.add((String) parent.getProperty("id"));
+				ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(node, methodContainerCache, parentNodes, model);
+				getMethodContainerExecutor.execute(tmcf);
 			}
-			if(repl.size() < tolerance)
+			getMethodContainerExecutor.shutdown();
+			while(getMethodContainerExecutor.isTerminated() == false)
 			{
-				importList.addAll(repl);
+				
+			}
+			if(parentNodes.size() < tolerance)
+			{
+				for(NodeJSON parent : parentNodes)
+					importList.add(parent.getProperty("id"));
 			}
 		}
 	}
@@ -173,7 +187,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		}
 	}
 	
-	private void upDateBasedOnImports()
+	private void updateBasedOnImports()
 	{
 		//Update variableTypeMap to hold only a possible import if one exists. Else leave untouched.
 		HashMultimap<Integer, NodeJSON> tempprinttypes = HashMultimap.create();
@@ -200,7 +214,8 @@ class SubsequentASTVisitor extends ASTVisitor
 			HashSet<NodeJSON> temp = new HashSet<NodeJSON>();
 			for(NodeJSON method : list)
 			{
-				temp.add(model.getMethodContainer(method, methodContainerCache));
+				NodeJSON conatiner = model.getMethodContainer(method, methodContainerCache);
+				temp.add(conatiner);
 			}
 			
 			Set<NodeJSON> replacementList = getNewClassElementsList(temp);
@@ -531,7 +546,7 @@ class SubsequentASTVisitor extends ASTVisitor
 	
 	public void endVisit(ClassInstanceCreation treeNode)
 	{
-		if(treeNode.getParent().getNodeType() == 59)
+		if(treeNode.getParent().getNodeType() == ASTNode.VARIABLE_DECLARATION_FRAGMENT)
 		{
 			int startPosition = treeNode.getType().getStartPosition();
 			
