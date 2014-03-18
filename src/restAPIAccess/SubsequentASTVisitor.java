@@ -607,23 +607,31 @@ class SubsequentASTVisitor extends ASTVisitor
 		String treeNodeString = treeNode.toString();
 		int startPosition = treeNode.getStartPosition();
 		ArrayList<Integer> scopeArray = getScopeArray(treeNode);
-		
+		ArrayList<NodeJSON> newContainerSet = new ArrayList<NodeJSON>();
 		Set<NodeJSON> candidateReturnNodes = methodReturnTypesMap.get(treeNodeString).get(scopeArray);
 		
 		Set<NodeJSON> currentMethods = printmethods.get(startPosition);
 		
-		Set<NodeJSON> newMethodNodes = new HashSet<NodeJSON>();
-		
+		ArrayList<NodeJSON> newMethodNodes = new ArrayList<NodeJSON>();
+		System.out.println("##- " + candidateReturnNodes.size() + " " +currentMethods.size() + " : " + treeNodeString);
+		for(NodeJSON n : candidateReturnNodes)
+		{
+			System.out.println("++ " + n.getProperty("id"));
+		}
 		for(NodeJSON method : currentMethods)
 		{
-			NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
+			//since its a constructor, return is the container class
+			//NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
+			NodeJSON returnNode = model.getMethodContainer(method, methodContainerCache);
 			if(contains(candidateReturnNodes, returnNode) == true)
 			{
+				newContainerSet.add(model.getMethodContainer(method, methodContainerCache));
 				newMethodNodes.add(method);
 			}
 		}
-		printmethods.removeAll(startPosition);
-		printmethods.putAll(startPosition, newMethodNodes);
+		System.out.println("##- " + newMethodNodes.size());
+		printmethods.replaceValues(startPosition, newMethodNodes);
+		printtypes.replaceValues(startPosition, newContainerSet);
 	}
 
 	public void endVisit(SuperMethodInvocation treeNode)
