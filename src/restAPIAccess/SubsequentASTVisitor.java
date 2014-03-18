@@ -410,7 +410,6 @@ class SubsequentASTVisitor extends ASTVisitor
 				candidateReturnNodes = temporaryMap2.get(rightScopeArray2);
 			}
 			Set<NodeJSON> currentMethods = printmethods.get(startPosition);
-			
 			Set<NodeJSON> newMethodNodes = new HashSet<NodeJSON>();
 			Set<NodeJSON> newReturnNodes = new HashSet<NodeJSON>();
 			Set<NodeJSON> newClassNodes = new HashSet<NodeJSON>();
@@ -418,10 +417,8 @@ class SubsequentASTVisitor extends ASTVisitor
 			{
 				NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
 				NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
-				System.out.println(method.getProperty("id") + " " + returnNode.getProperty("id") + " " + parentNode.getProperty("id"));
 				if(contains(candidateClassNodes,parentNode) && contains(candidateReturnNodes, returnNode))
 				{
-					System.out.println(method.getProperty("id"));
 					newMethodNodes.add(method);
 					newReturnNodes.add(returnNode);
 					newClassNodes.add(parentNode);
@@ -438,7 +435,6 @@ class SubsequentASTVisitor extends ASTVisitor
 			temporaryMap2.replaceValues(rightScopeArray2, newReturnNodes);
 			methodReturnTypesMap.put(treeNodeString, temporaryMap2);
 			printmethods.replaceValues(startPosition, newMethodNodes);
-			System.out.println("^^ "+ treeNode.getName().toString() + " " + newMethodNodes.size() + " " +  currentMethods.size());
 		}
 		else if(methodReturnTypesMap.containsKey(expression.toString()))
 		{
@@ -616,11 +612,6 @@ class SubsequentASTVisitor extends ASTVisitor
 		Set<NodeJSON> currentMethods = printmethods.get(startPosition);
 		
 		ArrayList<NodeJSON> newMethodNodes = new ArrayList<NodeJSON>();
-		System.out.println("##- " + candidateReturnNodes.size() + " " +currentMethods.size() + " : " + treeNodeString);
-		for(NodeJSON n : candidateReturnNodes)
-		{
-			System.out.println("++ " + n.getProperty("id"));
-		}
 		for(NodeJSON method : currentMethods)
 		{
 			//since its a constructor, return is the container class
@@ -632,7 +623,6 @@ class SubsequentASTVisitor extends ASTVisitor
 				newMethodNodes.add(method);
 			}
 		}
-		System.out.println("##- " + newMethodNodes.size());
 		printmethods.replaceValues(startPosition, newMethodNodes);
 		printtypes.replaceValues(startPosition, newContainerSet);
 	}
