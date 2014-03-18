@@ -418,8 +418,10 @@ class SubsequentASTVisitor extends ASTVisitor
 			{
 				NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
 				NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
+				System.out.println(method.getProperty("id") + " " + returnNode.getProperty("id") + " " + parentNode.getProperty("id"));
 				if(contains(candidateClassNodes,parentNode) && contains(candidateReturnNodes, returnNode))
 				{
+					System.out.println(method.getProperty("id"));
 					newMethodNodes.add(method);
 					newReturnNodes.add(returnNode);
 					newClassNodes.add(parentNode);
@@ -436,6 +438,7 @@ class SubsequentASTVisitor extends ASTVisitor
 			temporaryMap2.replaceValues(rightScopeArray2, newReturnNodes);
 			methodReturnTypesMap.put(treeNodeString, temporaryMap2);
 			printmethods.replaceValues(startPosition, newMethodNodes);
+			System.out.println("^^ "+ treeNode.getName().toString() + " " + newMethodNodes.size() + " " +  currentMethods.size());
 		}
 		else if(methodReturnTypesMap.containsKey(expression.toString()))
 		{
