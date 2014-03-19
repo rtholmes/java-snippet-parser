@@ -531,7 +531,7 @@ class FirstASTVisitor extends ASTVisitor
 							ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(candidateMethodNode, methodContainerCache, replacementClassNodesList, model);
 							getMethodContainerExecutor.execute(tmcf);
 
-							ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+							ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model, treeNode);
 							getMethodReturnExecutor.execute(tmrf);
 
 							hasCandidateFlag = 1;
@@ -577,7 +577,7 @@ class FirstASTVisitor extends ASTVisitor
 								ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(candidateMethodNode, methodContainerCache, replacementClassNodesList, model);
 								getMethodContainerExecutor.execute(tmcf);
 
-								ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+								ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model,treeNode);
 								getMethodReturnExecutor.execute(tmrf);
 							}
 						}
@@ -625,7 +625,7 @@ class FirstASTVisitor extends ASTVisitor
 						ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(candidateMethodNode, methodContainerCache, replacementClassNodesList, model);
 						getMethodContainerExecutor.execute(tmcf);
 
-						ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+						ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model,treeNode);
 						getMethodReturnExecutor.execute(tmrf);
 					}
 				}
@@ -711,7 +711,7 @@ class FirstASTVisitor extends ASTVisitor
 							ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(candidateMethodNode, methodContainerCache, replacementClassNodesList, model);
 							getMethodContainerExecutor.execute(tmcf);
 
-							ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+							ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model,treeNode);
 							getMethodReturnExecutor.execute(tmrf);
 
 							hasCandidateFlag = 1;
@@ -760,7 +760,7 @@ class FirstASTVisitor extends ASTVisitor
 								ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(candidateMethodNode, methodContainerCache, replacementClassNodesList, model);
 								getMethodContainerExecutor.execute(tmcf);
 
-								ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+								ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model,treeNode);
 								getMethodReturnExecutor.execute(tmrf);
 							}
 						}
@@ -837,7 +837,7 @@ class FirstASTVisitor extends ASTVisitor
 						ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(candidateMethodNode, methodContainerCache, replacementClassNodesList, model);
 						getMethodContainerExecutor.execute(tmcf);
 
-						ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+						ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model,treeNode);
 						getMethodReturnExecutor.execute(tmrf);
 
 						hasCandidateFlag = 1;
@@ -886,7 +886,7 @@ class FirstASTVisitor extends ASTVisitor
 							ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(candidateMethodNode, methodContainerCache, replacementClassNodesList, model);
 							getMethodContainerExecutor.execute(tmcf);
 
-							ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+							ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model,treeNode);
 							getMethodReturnExecutor.execute(tmrf);
 						}
 					}
@@ -996,7 +996,7 @@ class FirstASTVisitor extends ASTVisitor
 						{
 							printmethods.put(startPosition, candidateMethodNode);
 							replacementClassNodesList.add(candidateClassNode);
-							ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+							ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model,treeNode);
 							getMethodReturnExecutor.execute(tmrf);
 
 						}
@@ -1043,7 +1043,7 @@ class FirstASTVisitor extends ASTVisitor
 					ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(candidateMethodNode, methodContainerCache, replacementClassNodesList, model);
 					getMethodContainerExecutor.execute(tmcf);
 
-					ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+					ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model,treeNode);
 					getMethodReturnExecutor.execute(tmrf);
 				}
 			}
@@ -1604,7 +1604,7 @@ class FirstASTVisitor extends ASTVisitor
 					ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(candidateMethodNode, methodContainerCache, methodContainerList, model);
 					getMethodContainerExecutor.execute(tmcf);
 
-					ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model);
+					ThreadedMethodReturnFetch tmrf = new ThreadedMethodReturnFetch(candidateMethodNode, methodReturnCache, candidateAccumulator, scopeArray, model, treeNode);
 					getMethodReturnExecutor.execute(tmrf);
 				}
 			}
@@ -1625,6 +1625,7 @@ class FirstASTVisitor extends ASTVisitor
 	//Max parallel
 	public boolean visit(final ClassInstanceCreation treeNode)
 	{
+		System.out.println("here!" + treeNode.getType().toString());
 		ASTNode anon=treeNode.getAnonymousClassDeclaration();
 		if(anon!=null)
 		{
