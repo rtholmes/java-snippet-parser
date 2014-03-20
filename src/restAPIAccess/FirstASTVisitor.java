@@ -1824,12 +1824,13 @@ class FirstASTVisitor extends ASTVisitor
 		Assignment assNode = null;
 
 		//find corresponding assignment statement
+		
 		ASTNode temp = node;
-		while(temp.getNodeType() != ASTNode.ASSIGNMENT)
+		while(temp != null && temp.getNodeType() != ASTNode.ASSIGNMENT)
 		{
 			temp = temp.getParent();
 		}
-		if(temp.getNodeType() == ASTNode.ASSIGNMENT)
+		if(temp!=null && temp.getNodeType() == ASTNode.ASSIGNMENT)
 			assNode = (Assignment) temp;
 
 		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
@@ -1868,7 +1869,8 @@ class FirstASTVisitor extends ASTVisitor
 		}
 		variableTypeMap.put(node.toString(), temp1);
 		variableTypeMap.put("("+node.toString()+")", temp2);
-		methodReturnTypesMap.put(assNode.getRightHandSide().toString(), temp3);
+		if(assNode != null)
+			methodReturnTypesMap.put(assNode.getRightHandSide().toString(), temp3);
 		return true;
 	}
 

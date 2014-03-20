@@ -19,7 +19,7 @@ public class JavaBaker
 		Logger logger = new Logger();
 		String input_oracle = "http://gadget.cs:7474/db/data";
 		String input_file = "sample.txt";
-		int tolerance = 3;
+		int tolerance = 2;
 		int max_cardinality = 20;
 		Parser parser = new Parser(input_oracle, input_file);
 		CompilationUnit cu = parser.getCompilationUnitFromFile();
