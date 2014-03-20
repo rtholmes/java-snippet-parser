@@ -23,6 +23,8 @@ import Node.IndexHits;
 import Node.NodeJSON;
 import RestAPI.GraphServerAccess;
 import RestAPI.ThreadedMethodContainerFetch;
+import RestAPI.ThreadedMethodsInClassFetch;
+import RestAPI.ThreadedParentFetch;
 
 import com.google.common.collect.HashMultimap;
 
@@ -413,6 +415,7 @@ class SubsequentASTVisitor extends ASTVisitor
 			Set<NodeJSON> newMethodNodes = new HashSet<NodeJSON>();
 			Set<NodeJSON> newReturnNodes = new HashSet<NodeJSON>();
 			Set<NodeJSON> newClassNodes = new HashSet<NodeJSON>();
+			int foundFlag= 0;
 			for(NodeJSON method : currentMethods)
 			{
 				NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
@@ -422,9 +425,37 @@ class SubsequentASTVisitor extends ASTVisitor
 					newMethodNodes.add(method);
 					newReturnNodes.add(returnNode);
 					newClassNodes.add(parentNode);
+					foundFlag = 1;
 				}
 			}
-			
+			if(foundFlag == 0)
+			{
+				List<NodeJSON> candidateParentNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
+				ExecutorService getParentClass = Executors.newFixedThreadPool(NThreads);
+	
+				for(NodeJSON candidateClassNode : candidateClassNodes)
+				{
+					ThreadedParentFetch tpf = new ThreadedParentFetch(candidateClassNode, treeNode, candidateParentNodes, parentNodeCache, model);
+					getParentClass.execute(tpf);
+				}
+				getParentClass.shutdown();
+				while(getParentClass.isTerminated() == false)
+				{
+	
+				}
+				Set<NodeJSON> parentSet = new HashSet<NodeJSON>(candidateParentNodes);
+				for(NodeJSON method : currentMethods)
+				{
+					NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
+					NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
+					if(contains(parentSet,parentNode) && contains(candidateReturnNodes, returnNode))
+					{
+						newMethodNodes.add(method);
+						newReturnNodes.add(returnNode);
+						newClassNodes.add(parentNode);
+					}
+				}
+			}
 			if(newClassNodes.size() < tolerance)
 			{
 				for(NodeJSON newClassNode : newClassNodes)
@@ -432,6 +463,7 @@ class SubsequentASTVisitor extends ASTVisitor
 			}
 			temporaryMap1.replaceValues(rightScopeArray1, newClassNodes);
 			variableTypeMap.put(expression.toString(), temporaryMap1);
+			printtypes.replaceValues(printTypesMap.get(expression.toString()), newClassNodes);
 			temporaryMap2.replaceValues(rightScopeArray2, newReturnNodes);
 			methodReturnTypesMap.put(treeNodeString, temporaryMap2);
 			printmethods.replaceValues(startPosition, newMethodNodes);
@@ -482,6 +514,21 @@ class SubsequentASTVisitor extends ASTVisitor
 			temporaryMap2.removeAll(rightScopeArray2);
 			temporaryMap2.putAll(rightScopeArray2, newReturnNodes);
 		}
+	}
+
+	private boolean containsParent(Set<NodeJSON> candidateNodes, NodeJSON candidateNode) 
+	{
+		String id = candidateNode.getProperty("id");
+		for(NodeJSON node : candidateNodes)
+		{
+			if(node.getProperty("id").equals(id))
+			{
+				return true;
+			}
+			if(model.checkIfParentNode(node, candidateNode.getProperty("id"), parentNodeCache))
+				return true;
+		}
+		return false;
 	}
 
 	private boolean contains(Set<NodeJSON> candidateNodes, NodeJSON returnNode) 
