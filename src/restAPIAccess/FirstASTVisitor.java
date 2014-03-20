@@ -833,10 +833,10 @@ class FirstASTVisitor extends ASTVisitor
 				String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
 				if((candidateMethodExactName).equals( treeNode.getName().toString()))
 				{
+					
 					if(matchParams(candidateMethodNode, treeNode.arguments())==true)
 					{
 						printmethods.put(startPosition, candidateMethodNode);
-
 						ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(candidateMethodNode, methodContainerCache, replacementClassNodesList, model);
 						getMethodContainerExecutor.execute(tmcf);
 
@@ -882,10 +882,11 @@ class FirstASTVisitor extends ASTVisitor
 					String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
 					if(candidateMethodExactName.equals(treeNode.getName().toString()))
 					{
+						System.out.println("^^ " + candidateMethodNode.getProperty("id"));
 						if(matchParams(candidateMethodNode, treeNode.arguments())==true)
 						{
 							printmethods.put(startPosition, candidateMethodNode);
-
+							System.out.println("** " + candidateMethodNode.getProperty("id"));
 							ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(candidateMethodNode, methodContainerCache, replacementClassNodesList, model);
 							getMethodContainerExecutor.execute(tmcf);
 
@@ -902,9 +903,14 @@ class FirstASTVisitor extends ASTVisitor
 			}
 
 			methodReturnTypesMap.put(treeNodeString, candidateAccumulator);
-			temporaryMap.replaceValues(rightScopeArray, replacementClassNodesList);
-			variableTypeMap.put(expressionString, temporaryMap);
-			printtypes.replaceValues(printTypesMap.get(expressionString), replacementClassNodesList);
+			if(hasCandidateFlag != 0)
+			{
+				temporaryMap.replaceValues(rightScopeArray, replacementClassNodesList);
+				variableTypeMap.put(expressionString, temporaryMap);
+				printtypes.replaceValues(printTypesMap.get(expressionString), replacementClassNodesList);
+			}
+			
+			printtypes.putAll(startPosition, replacementClassNodesList);
 			if(replacementClassNodesList.size() < tolerance)
 			{
 				for(NodeJSON candidate : replacementClassNodesList)
@@ -1148,6 +1154,7 @@ class FirstASTVisitor extends ASTVisitor
 			else if(param.getNodeType() == ASTNode.STRING_LITERAL)
 			{
 				possibleTypes.add("String");
+				possibleTypes.add("CharSequence");
 			}
 			else if (param.getNodeType() == ASTNode.SIMPLE_NAME)
 			{
@@ -1822,16 +1829,21 @@ class FirstASTVisitor extends ASTVisitor
 	{
 
 		Assignment assNode = null;
-
+		VariableDeclarationFragment varNode = null;
 		//find corresponding assignment statement
 		
 		ASTNode temp = node;
-		while(temp != null && temp.getNodeType() != ASTNode.ASSIGNMENT)
+		while(temp != null && (temp.getNodeType() != ASTNode.ASSIGNMENT || temp.getNodeType() != ASTNode.VARIABLE_DECLARATION_FRAGMENT))
 		{
 			temp = temp.getParent();
 		}
-		if(temp!=null && temp.getNodeType() == ASTNode.ASSIGNMENT)
-			assNode = (Assignment) temp;
+		if(temp!=null)
+		{
+			if(temp.getNodeType() == ASTNode.ASSIGNMENT )
+				assNode = (Assignment) temp;
+			else if(temp.getNodeType() != ASTNode.VARIABLE_DECLARATION_FRAGMENT)
+				varNode = (VariableDeclarationFragment) temp;
+		}
 
 		ArrayList<NodeJSON> candidateClassNodes = new ArrayList<NodeJSON>();
 		if(!isLocalClass(node.getType().toString()))
@@ -1871,6 +1883,8 @@ class FirstASTVisitor extends ASTVisitor
 		variableTypeMap.put("("+node.toString()+")", temp2);
 		if(assNode != null)
 			methodReturnTypesMap.put(assNode.getRightHandSide().toString(), temp3);
+		else if(varNode != null)
+			methodReturnTypesMap.put(varNode.getInitializer().toString(), temp3);
 		return true;
 	}
 
@@ -1881,6 +1895,9 @@ class FirstASTVisitor extends ASTVisitor
 		lhs=node.getLeftHandSide().toString();
 		rhs=node.getRightHandSide().toString();
 
+		if(node.getRightHandSide().getNodeType() == ASTNode.CAST_EXPRESSION)
+			return;
+		
 		if(methodReturnTypesMap.containsKey(rhs))
 		{
 			if(!variableTypeMap.containsKey(lhs))

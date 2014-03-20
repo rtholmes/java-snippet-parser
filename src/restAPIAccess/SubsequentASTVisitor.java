@@ -441,7 +441,7 @@ class SubsequentASTVisitor extends ASTVisitor
 				getParentClass.shutdown();
 				while(getParentClass.isTerminated() == false)
 				{
-	
+				
 				}
 				Set<NodeJSON> parentSet = new HashSet<NodeJSON>(candidateParentNodes);
 				for(NodeJSON method : currentMethods)
@@ -450,6 +450,7 @@ class SubsequentASTVisitor extends ASTVisitor
 					NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
 					if(contains(parentSet,parentNode) && contains(candidateReturnNodes, returnNode))
 					{
+						System.out.println("true!" + parentNode.getProperty("id"));
 						newMethodNodes.add(method);
 						newReturnNodes.add(returnNode);
 						newClassNodes.add(parentNode);
