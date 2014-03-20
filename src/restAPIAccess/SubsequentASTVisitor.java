@@ -428,26 +428,31 @@ class SubsequentASTVisitor extends ASTVisitor
 					foundFlag = 1;
 				}
 			}
+			List<NodeJSON> candidateParentNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
+			ExecutorService getParentClass = Executors.newFixedThreadPool(NThreads);
+
+			for(NodeJSON candidateClassNode : candidateClassNodes)
+			{
+				ThreadedParentFetch tpf = new ThreadedParentFetch(candidateClassNode, treeNode, candidateParentNodes, parentNodeCache, model);
+				getParentClass.execute(tpf);
+			}
+			getParentClass.shutdown();
+			while(getParentClass.isTerminated() == false)
+			{
+			
+			}
+			for(NodeJSON parentX : candidateParentNodes)
+			{
+				System.out.println("--"  +parentX.getProperty("id"));
+			}
+			Set<NodeJSON> parentSet = new HashSet<NodeJSON>(candidateParentNodes);
 			if(foundFlag == 0)
 			{
-				List<NodeJSON> candidateParentNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
-				ExecutorService getParentClass = Executors.newFixedThreadPool(NThreads);
-	
-				for(NodeJSON candidateClassNode : candidateClassNodes)
-				{
-					ThreadedParentFetch tpf = new ThreadedParentFetch(candidateClassNode, treeNode, candidateParentNodes, parentNodeCache, model);
-					getParentClass.execute(tpf);
-				}
-				getParentClass.shutdown();
-				while(getParentClass.isTerminated() == false)
-				{
-				
-				}
-				Set<NodeJSON> parentSet = new HashSet<NodeJSON>(candidateParentNodes);
 				for(NodeJSON method : currentMethods)
 				{
 					NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
 					NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
+					System.out.println("here!" + parentNode.getProperty("id"));
 					if(contains(parentSet,parentNode) && contains(candidateReturnNodes, returnNode))
 					{
 						System.out.println("true!" + parentNode.getProperty("id"));
@@ -519,14 +524,10 @@ class SubsequentASTVisitor extends ASTVisitor
 
 	private boolean containsParent(Set<NodeJSON> candidateNodes, NodeJSON candidateNode) 
 	{
-		String id = candidateNode.getProperty("id");
-		for(NodeJSON node : candidateNodes)
+		ArrayList<NodeJSON> parentNodes = model.getParents(candidateNode, parentNodeCache);
+		for(NodeJSON parentNode : parentNodes)
 		{
-			if(node.getProperty("id").equals(id))
-			{
-				return true;
-			}
-			if(model.checkIfParentNode(node, candidateNode.getProperty("id"), parentNodeCache))
+			if(contains(candidateNodes, parentNode))
 				return true;
 		}
 		return false;
@@ -538,7 +539,10 @@ class SubsequentASTVisitor extends ASTVisitor
 		for(NodeJSON node : candidateNodes)
 		{
 			if(node.getProperty("id").equals(id))
+				return true;
+			if(model.checkIfParentNode(returnNode, node.getProperty("id"), parentNodeCache))
 			{
+				System.out.println("%% " + returnNode.getProperty("id") + " - " + node.getProperty("id"));
 				return true;
 			}
 		}
