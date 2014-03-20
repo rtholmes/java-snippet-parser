@@ -21,6 +21,7 @@ import RestAPI.ThreadedMethodFetch;
 import com.google.common.collect.HashMultimap;
 
 import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.ArrayType;
 import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.CatchClause;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
@@ -31,9 +32,11 @@ import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.ParameterizedType;
+import org.eclipse.jdt.core.dom.SimpleType;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.SuperConstructorInvocation;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
+import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 
@@ -63,7 +66,7 @@ class PrefetchCandidates extends ASTVisitor
 	
 	public Stack<String> classNames; 
 	public String superclassname;
-	public ArrayList<Object> interfaces;
+	public ArrayList<String> interfaces;
 	public int tolerance;
 	public int MAX_CARDINALITY;
 
@@ -97,7 +100,7 @@ class PrefetchCandidates extends ASTVisitor
 		
 		classNames = new Stack<String>();
 		superclassname = new String();
-		interfaces = new ArrayList<Object>();
+		interfaces = new ArrayList<String>();
 
 		processedClasses = new HashSet<String>();
 		processedMethods = new HashSet<String>();
@@ -251,7 +254,7 @@ class PrefetchCandidates extends ASTVisitor
 	public boolean visit(TypeDeclaration treeNode)
 	{
 		classNames.push(treeNode.getName().toString());
-		if(treeNode.getSuperclassType()!=null)
+		if(treeNode.getSuperclassType() != null)
 		{
 			if(treeNode.getSuperclassType().getNodeType() == ASTNode.PARAMETERIZED_TYPE)
 			{
@@ -263,9 +266,25 @@ class PrefetchCandidates extends ASTVisitor
 			}
 		}
 
-		for(Object ob : treeNode.superInterfaceTypes())
-		{	
-			interfaces.add(ob);
+		List<Type> superInterfaces = treeNode.superInterfaceTypes();
+		for(Type superInterface : superInterfaces)
+		{
+			if(superInterface.isParameterizedType())
+			{
+				interfaces.add(((ParameterizedType)superInterface).getType().toString());
+			}
+			else if(superInterface.isSimpleType())
+			{
+				interfaces.add(((SimpleType)superInterface).getName().toString());
+			}
+			else if(superInterface.isArrayType())
+			{
+				interfaces.add(((ArrayType)superInterface).getElementType().toString());
+			}
+			else if(superInterface.isArrayType())
+			{
+				interfaces.add(((ArrayType)superInterface).getElementType().toString());
+			}
 		}
 		return true;
 	}

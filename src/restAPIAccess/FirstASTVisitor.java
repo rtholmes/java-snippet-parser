@@ -27,6 +27,7 @@ import RestAPI.ThreadedParentFetch;
 import com.google.common.collect.HashMultimap;
 
 import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.ArrayType;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.CatchClause;
@@ -42,10 +43,11 @@ import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.ParameterizedType;
+import org.eclipse.jdt.core.dom.SimpleType;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.SuperConstructorInvocation;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
-import org.eclipse.jdt.core.dom.ThisExpression;
+import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
@@ -79,7 +81,7 @@ class FirstASTVisitor extends ASTVisitor
 	public Set<String> importList;
 	public Stack<String> classNames; 
 	public String superclassname;
-	public ArrayList<Object> interfaces;
+	public ArrayList<String> interfaces;
 	public int tolerance;
 	public int MAX_CARDINALITY;
 	public HashMap<String, IndexHits<NodeJSON>> allMethodsInClass;
@@ -154,7 +156,7 @@ class FirstASTVisitor extends ASTVisitor
 		importList = new HashSet<String>();
 		classNames = new Stack<String>();
 		superclassname = new String();
-		interfaces = new ArrayList<Object>();
+		interfaces = new ArrayList<String>();
 	}
 
 
@@ -1223,11 +1225,11 @@ class FirstASTVisitor extends ASTVisitor
 					flag=0;
 					break;
 				}
-				/*else if(model.checkIfParentNode(graphParam, arg, parentNodeCache))
+				else if(model.checkIfParentNode(graphParam, arg, parentNodeCache))
 				{
 					flag=0;
 					break;
-				}*/
+				}
 				else
 					flag=1;
 			}
@@ -1256,7 +1258,26 @@ class FirstASTVisitor extends ASTVisitor
 
 		for(Object ob : treeNode.superInterfaceTypes())
 		{	
-			interfaces.add(ob);
+			List<Type> superInterfaces = treeNode.superInterfaceTypes();
+			for(Type superInterface : superInterfaces)
+			{
+				if(superInterface.isParameterizedType())
+				{
+					interfaces.add(((ParameterizedType)superInterface).getType().toString());
+				}
+				else if(superInterface.isSimpleType())
+				{
+					interfaces.add(((SimpleType)superInterface).getName().toString());
+				}
+				else if(superInterface.isArrayType())
+				{
+					interfaces.add(((ArrayType)superInterface).getElementType().toString());
+				}
+				else if(superInterface.isArrayType())
+				{
+					interfaces.add(((ArrayType)superInterface).getElementType().toString());
+				}
+			}
 		}
 		return true;
 	}
@@ -1265,6 +1286,8 @@ class FirstASTVisitor extends ASTVisitor
 	public void endVisit(TypeDeclaration treeNode)
 	{
 		classNames.pop();
+		superclassname = "";
+		interfaces.clear();
 	}
 
 	//Max parallel
