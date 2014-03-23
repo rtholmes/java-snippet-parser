@@ -416,38 +416,58 @@ class SubsequentASTVisitor extends ASTVisitor
 			Set<NodeJSON> newReturnNodes = new HashSet<NodeJSON>();
 			Set<NodeJSON> newClassNodes = new HashSet<NodeJSON>();
 			int foundFlag= 0;
-			for(NodeJSON method : currentMethods)
-			{
-				NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
-				NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
-				if(contains(candidateClassNodes,parentNode) && contains(candidateReturnNodes, returnNode))
-				{
-					newMethodNodes.add(method);
-					newReturnNodes.add(returnNode);
-					newClassNodes.add(parentNode);
-					foundFlag = 1;
-				}
-			}
-			List<NodeJSON> candidateParentNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
-			ExecutorService getParentClass = Executors.newFixedThreadPool(NThreads);
-
+			
 			for(NodeJSON candidateClassNode : candidateClassNodes)
 			{
-				ThreadedParentFetch tpf = new ThreadedParentFetch(candidateClassNode, treeNode, candidateParentNodes, parentNodeCache, model);
-				getParentClass.execute(tpf);
+				for(NodeJSON method : currentMethods)
+				{
+					NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
+					
+					if(parentNode.getProperty("id").equals(candidateClassNode.getProperty("id")) || model.checkIfParentNode(parentNode, candidateClassNode.getProperty("id"), parentNodeCache))
+					{
+						newMethodNodes.add(method);
+						newClassNodes.add(parentNode);
+						foundFlag = 1;
+					}
+				}
 			}
-			getParentClass.shutdown();
-			while(getParentClass.isTerminated() == false)
-			{
 			
-			}
-			for(NodeJSON parentX : candidateParentNodes)
+			for(NodeJSON candidateReturnNode : candidateReturnNodes)
 			{
-				System.out.println("--"  +parentX.getProperty("id"));
+				for(NodeJSON method : currentMethods)
+				{
+					NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
+					
+					if(returnNode.getProperty("id").equals(candidateReturnNode.getProperty("id")) || model.checkIfParentNode(returnNode, candidateReturnNode.getProperty("id"), parentNodeCache))
+					{
+						newMethodNodes.add(method);
+						newReturnNodes.add(returnNode);
+						foundFlag = 1;
+					}
+				}
 			}
-			Set<NodeJSON> parentSet = new HashSet<NodeJSON>(candidateParentNodes);
+			
 			if(foundFlag == 0)
-			{
+			{/*
+				List<NodeJSON> candidateParentNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
+				ExecutorService getParentClass = Executors.newFixedThreadPool(NThreads);
+
+				for(NodeJSON candidateClassNode : candidateClassNodes)
+				{
+					ThreadedParentFetch tpf = new ThreadedParentFetch(candidateClassNode, treeNode, candidateParentNodes, parentNodeCache, model);
+					getParentClass.execute(tpf);
+				}
+				getParentClass.shutdown();
+				while(getParentClass.isTerminated() == false)
+				{
+				
+				}
+				for(NodeJSON parentX : candidateParentNodes)
+				{
+					System.out.println("--"  +parentX.getProperty("id"));
+				}
+				Set<NodeJSON> parentSet = new HashSet<NodeJSON>(candidateParentNodes);
+				
 				for(NodeJSON method : currentMethods)
 				{
 					NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
@@ -461,7 +481,7 @@ class SubsequentASTVisitor extends ASTVisitor
 						newClassNodes.add(parentNode);
 					}
 				}
-			}
+			*/}
 			if(newClassNodes.size() < tolerance)
 			{
 				for(NodeJSON newClassNode : newClassNodes)
@@ -522,29 +542,13 @@ class SubsequentASTVisitor extends ASTVisitor
 		}
 	}
 
-	private boolean containsParent(Set<NodeJSON> candidateNodes, NodeJSON candidateNode) 
+	private boolean contains(Set<NodeJSON> candidateNodes, NodeJSON containerNode) 
 	{
-		ArrayList<NodeJSON> parentNodes = model.getParents(candidateNode, parentNodeCache);
-		for(NodeJSON parentNode : parentNodes)
-		{
-			if(contains(candidateNodes, parentNode))
-				return true;
-		}
-		return false;
-	}
-
-	private boolean contains(Set<NodeJSON> candidateNodes, NodeJSON returnNode) 
-	{
-		String id = returnNode.getProperty("id");
+		String id = containerNode.getProperty("id");
 		for(NodeJSON node : candidateNodes)
 		{
 			if(node.getProperty("id").equals(id))
 				return true;
-			if(model.checkIfParentNode(returnNode, node.getProperty("id"), parentNodeCache))
-			{
-				System.out.println("%% " + returnNode.getProperty("id") + " - " + node.getProperty("id"));
-				return true;
-			}
 		}
 		return false;
 	}
