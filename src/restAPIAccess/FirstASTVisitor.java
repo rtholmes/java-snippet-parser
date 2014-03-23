@@ -659,7 +659,6 @@ class FirstASTVisitor extends ASTVisitor
 		else if(expression.getNodeType() == ASTNode.FIELD_ACCESS)
 		{
 			FieldAccess fe = (FieldAccess)expression;
-			
 			if(fe.getExpression().getNodeType() == ASTNode.THIS_EXPRESSION)
 			{
 				expressionString = fe.getName().toString();

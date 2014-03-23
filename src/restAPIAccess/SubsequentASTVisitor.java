@@ -23,8 +23,6 @@ import Node.IndexHits;
 import Node.NodeJSON;
 import RestAPI.GraphServerAccess;
 import RestAPI.ThreadedMethodContainerFetch;
-import RestAPI.ThreadedMethodsInClassFetch;
-import RestAPI.ThreadedParentFetch;
 
 import com.google.common.collect.HashMultimap;
 
@@ -147,9 +145,9 @@ class SubsequentASTVisitor extends ASTVisitor
 	{
 		for(Integer key : printtypes.keySet())
 		{
-			if(printtypes.get(key).size() < tolerance)
+			Set<NodeJSON> temp = printtypes.get(key);
+			if(temp.size() < tolerance)
 			{
-				Set<NodeJSON> temp = printtypes.get(key);
 				for(NodeJSON node : temp)
 					addCorrespondingImport((String)node.getProperty("id"));
 			}
@@ -161,18 +159,19 @@ class SubsequentASTVisitor extends ASTVisitor
 			List<NodeJSON> parentNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
 			ExecutorService getMethodContainerExecutor = Executors.newFixedThreadPool(NThreads);
 			
-			for(NodeJSON node : temp)
+			if(temp.size() < tolerance)
 			{
-				ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(node, methodContainerCache, parentNodes, model);
-				getMethodContainerExecutor.execute(tmcf);
-			}
-			getMethodContainerExecutor.shutdown();
-			while(getMethodContainerExecutor.isTerminated() == false)
-			{
-				
-			}
-			if(parentNodes.size() < tolerance)
-			{
+				for(NodeJSON node : temp)
+				{
+					ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(node, methodContainerCache, parentNodes, model);
+					getMethodContainerExecutor.execute(tmcf);
+				}
+				getMethodContainerExecutor.shutdown();
+				while(getMethodContainerExecutor.isTerminated() == false)
+				{
+					
+				}
+			
 				for(NodeJSON parent : parentNodes)
 					importList.add(parent.getProperty("id"));
 			}
@@ -243,16 +242,24 @@ class SubsequentASTVisitor extends ASTVisitor
 		printmethods = tempprintmethods;
 	}
 	
-	private Set<NodeJSON> getNewClassElementsList(Set<NodeJSON> list)
+	private Set<NodeJSON> getNewClassElementsList(Set<NodeJSON> candidateClassElements)
 	{
+		HashSet<String> completeSet = new HashSet<String>();
+		HashSet<String> prunedSet = new HashSet<String>();
+		Set<NodeJSON> classElementsArrayList = new HashSet<NodeJSON>();
 		Set<NodeJSON> prunedClassElementList = new HashSet<NodeJSON>();
 		int flag = 0;
-		if(!importList.isEmpty())
-		{
-			for(NodeJSON classElement: list)
-			{
-				String className = (String) classElement.getProperty("id");
 
+		for(NodeJSON classElement: candidateClassElements)
+		{
+			String className = (String) classElement.getProperty("id");
+			if(!completeSet.contains(className))
+			{
+				classElementsArrayList.add(classElement);
+				completeSet.add(className);
+			}
+			if(!importList.isEmpty())
+			{
 				for(String importItem : importList)
 				{
 					if(importItem.contains(".*"))
@@ -261,18 +268,20 @@ class SubsequentASTVisitor extends ASTVisitor
 					}
 					if(className.startsWith(importItem) || className.startsWith("java.lang"))
 					{
-						prunedClassElementList.add(classElement);
-						flag = 1;
+						if(!prunedSet.contains(className))
+						{
+							prunedSet.add(className);
+							prunedClassElementList.add(classElement);
+							flag = 1;
+						}
 					}
 				}
 			}
-			if(flag == 0)
-				return list;
-			else
-				return prunedClassElementList;
 		}
+		if(flag == 0)
+			return classElementsArrayList;
 		else
-			return list;
+			return prunedClassElementList;
 	}
 
 	private ArrayList<Integer> getScopeArray(ASTNode treeNode)
@@ -423,7 +432,7 @@ class SubsequentASTVisitor extends ASTVisitor
 				{
 					NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
 					
-					if(parentNode.getProperty("id").equals(candidateClassNode.getProperty("id")) || model.checkIfParentNode(parentNode, candidateClassNode.getProperty("id"), parentNodeCache))
+					if(parentNode.getProperty("id").equals(candidateClassNode.getProperty("id")))
 					{
 						newMethodNodes.add(method);
 						newClassNodes.add(parentNode);
@@ -438,7 +447,7 @@ class SubsequentASTVisitor extends ASTVisitor
 				{
 					NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
 					
-					if(returnNode.getProperty("id").equals(candidateReturnNode.getProperty("id")) || model.checkIfParentNode(returnNode, candidateReturnNode.getProperty("id"), parentNodeCache))
+					if(returnNode.getProperty("id").equals(candidateReturnNode.getProperty("id")))
 					{
 						newMethodNodes.add(method);
 						newReturnNodes.add(returnNode);
@@ -448,40 +457,38 @@ class SubsequentASTVisitor extends ASTVisitor
 			}
 			
 			if(foundFlag == 0)
-			{/*
-				List<NodeJSON> candidateParentNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
-				ExecutorService getParentClass = Executors.newFixedThreadPool(NThreads);
-
+			{
 				for(NodeJSON candidateClassNode : candidateClassNodes)
 				{
-					ThreadedParentFetch tpf = new ThreadedParentFetch(candidateClassNode, treeNode, candidateParentNodes, parentNodeCache, model);
-					getParentClass.execute(tpf);
-				}
-				getParentClass.shutdown();
-				while(getParentClass.isTerminated() == false)
-				{
-				
-				}
-				for(NodeJSON parentX : candidateParentNodes)
-				{
-					System.out.println("--"  +parentX.getProperty("id"));
-				}
-				Set<NodeJSON> parentSet = new HashSet<NodeJSON>(candidateParentNodes);
-				
-				for(NodeJSON method : currentMethods)
-				{
-					NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
-					NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
-					System.out.println("here!" + parentNode.getProperty("id"));
-					if(contains(parentSet,parentNode) && contains(candidateReturnNodes, returnNode))
+					for(NodeJSON method : currentMethods)
 					{
-						System.out.println("true!" + parentNode.getProperty("id"));
-						newMethodNodes.add(method);
-						newReturnNodes.add(returnNode);
-						newClassNodes.add(parentNode);
+						NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
+						
+						if(model.checkIfParentNode(parentNode, candidateClassNode.getProperty("id"), parentNodeCache))
+						{
+							newMethodNodes.add(method);
+							newClassNodes.add(parentNode);
+							foundFlag = 1;
+						}
 					}
 				}
-			*/}
+				
+				for(NodeJSON candidateReturnNode : candidateReturnNodes)
+				{
+					for(NodeJSON method : currentMethods)
+					{
+						NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
+						
+						if(model.checkIfParentNode(returnNode, candidateReturnNode.getProperty("id"), parentNodeCache))
+						{
+							newMethodNodes.add(method);
+							newReturnNodes.add(returnNode);
+							foundFlag = 1;
+						}
+					}
+				}
+			}
+			
 			if(newClassNodes.size() < tolerance)
 			{
 				for(NodeJSON newClassNode : newClassNodes)
@@ -880,10 +887,6 @@ class SubsequentASTVisitor extends ASTVisitor
 				}
 			}
 		}
-		for(NodeJSON s : removeSet)
-		{
-			//System.out.println(s.getProperty("id"));
-		}
 		set.removeAll(removeSet);
 		return set;
 	}
@@ -902,10 +905,6 @@ class SubsequentASTVisitor extends ASTVisitor
 						removeSet.add(child);
 				}
 			}
-		}
-		for(NodeJSON s : removeSet)
-		{
-			//System.out.println(s.getProperty("id"));
 		}
 		set.removeAll(removeSet);
 		return set;
