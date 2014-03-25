@@ -86,8 +86,9 @@ class FirstASTVisitor extends ASTVisitor
 	public int tolerance;
 	public int MAX_CARDINALITY;
 	public HashMap<String, IndexHits<NodeJSON>> allMethodsInClass;
-
-	public FirstASTVisitor(GraphServerAccess db, CompilationUnit cu, int cutype, int tolerance, int max_cardinality) 
+	public HashSet<String> primitiveTypesSet;
+	
+	/*public FirstASTVisitor(GraphServerAccess db, CompilationUnit cu, int cutype, int tolerance, int max_cardinality) 
 	{
 		this.model = db;
 		this.cu = cu;
@@ -96,7 +97,7 @@ class FirstASTVisitor extends ASTVisitor
 		MAX_CARDINALITY = max_cardinality;
 		initializeAllFields();
 		fetchLocalClassesAndMethods(cu);
-	}
+	}*/
 
 	public FirstASTVisitor(PrefetchCandidates prefetch_visitor)
 	{
@@ -128,6 +129,8 @@ class FirstASTVisitor extends ASTVisitor
 		printTypesMap = new HashMap<String, Integer>();
 		printMethodsMap = new HashMap<String, Integer>();
 		importList = new HashSet<String>();
+		
+		primitiveTypesSet = prefetch_visitor.primitiveTypesSet;
 	}
 
 	/*
@@ -415,6 +418,7 @@ class FirstASTVisitor extends ASTVisitor
 
 			for(NodeJSON candidateClass : candidateClassNodes)
 			{
+				System.out.println("VD: " + candidateClass.getProperty("id"));
 				candidateAccumulator.put(scopeArray, candidateClass);
 				printtypes.put(startPosition, candidateClass);
 				if(candidateClassNodes.size() < tolerance)
@@ -1312,7 +1316,7 @@ class FirstASTVisitor extends ASTVisitor
 			{
 				if(((String)graphParam.getProperty("exactName")).equals(arg) || ((String)graphParam.getProperty("id")).equals(arg))
 				{
-					flag=0;
+					flag = 0;
 					break;
 				}
 				else if(((String)graphParam.getProperty("exactName")).endsWith("." + arg) || ((String)graphParam.getProperty("exactName")).endsWith("$" + arg))
@@ -1322,22 +1326,36 @@ class FirstASTVisitor extends ASTVisitor
 				}
 				else if(arg.equals("UNKNOWN"))
 				{
-					flag=0;
+					flag = 0;
 					break;
 				}
-				else if(model.checkIfParentNode(graphParam, arg, parentNodeCache))
+				else if(!isPrimitive(arg))
 				{
-					flag=0;
-					break;
+					if(model.checkIfParentNode(graphParam, arg, parentNodeCache))
+					{
+						flag = 0;
+						break;
+					}
+					else
+					{
+						flag = 1;
+					}
 				}
 				else
 					flag=1;
 			}
-			if(flag==1)
+			if(flag == 1)
 				return false;
 		}
 
 		return true;
+	}
+
+	private boolean isPrimitive(String arg) 
+	{
+		if(primitiveTypesSet.contains(arg))
+			return true;
+		return false;
 	}
 
 	//Max parallel
@@ -1995,9 +2013,9 @@ class FirstASTVisitor extends ASTVisitor
 
 		/*if(node.getRightHandSide().getNodeType() == ASTNode.CAST_EXPRESSION)
 			return;*/
-		
 		if(methodReturnTypesMap.containsKey(rhs))
 		{
+			System.out.println("blah: " + rhs);
 			System.out.println("$$ " + rhs );
 			if(!variableTypeMap.containsKey(lhs))
 			{
@@ -2089,9 +2107,6 @@ class FirstASTVisitor extends ASTVisitor
 	{
 		checkForNull();
 
-		//Add to primitive and uncomment to remove unwanted elements
-		//String[] primitive = {"int","float","char","long","boolean","String","byte[]","String[]","int[]","float[]","char[]","long[]","byte"};
-		String[] primitive={};
 		JSONObject main_json=new JSONObject();
 
 		//Collections.sort(printtypes, printtypes.keySet());
@@ -2102,16 +2117,7 @@ class FirstASTVisitor extends ASTVisitor
 			List<String> namelist = new ArrayList<String>();
 			for(NodeJSON type_name:printtypes.get(key))
 			{
-				int isprimitive=0;
-				for(String primitive_type : primitive)
-				{
-					if(((String)type_name.getProperty("id")).equals(primitive_type)==true)
-					{
-						isprimitive=1;
-						break;
-					}
-				}
-				if(isprimitive==0)
+				//if(!isPrimitive(type_name.getProperty("id")))
 				{
 					String nameOfClass = (String)type_name.getProperty("id");
 					namelist.add("\""+nameOfClass+"\"");
@@ -2121,8 +2127,8 @@ class FirstASTVisitor extends ASTVisitor
 						flag=1;
 					}
 				}
-
 			}
+			
 			if(namelist.isEmpty()==false)
 			{
 				JSONObject json = new JSONObject();

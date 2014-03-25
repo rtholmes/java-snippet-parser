@@ -70,6 +70,8 @@ class PrefetchCandidates extends ASTVisitor
 	public int tolerance;
 	public int MAX_CARDINALITY;
 
+	public HashSet<String> primitiveTypesSet;
+	
 	public PrefetchCandidates(GraphServerAccess db, CompilationUnit cu, int cutype, int tolerance, int max_cardinality) 
 	{
 		this.model = db;
@@ -104,6 +106,20 @@ class PrefetchCandidates extends ASTVisitor
 
 		processedClasses = new HashSet<String>();
 		processedMethods = new HashSet<String>();
+		
+		primitiveTypesSet = new HashSet<String>();
+		primitiveTypesSet.add("int");
+		primitiveTypesSet.add("long");
+		primitiveTypesSet.add("float");
+		primitiveTypesSet.add("char");
+		primitiveTypesSet.add("byte");
+		primitiveTypesSet.add("boolean");
+		primitiveTypesSet.add("byte[]");
+		primitiveTypesSet.add("int[]");
+		primitiveTypesSet.add("float[]");
+		primitiveTypesSet.add("char[]");
+		primitiveTypesSet.add("long[]");
+		primitiveTypesSet.add("boolean[]");
 	}
 
 

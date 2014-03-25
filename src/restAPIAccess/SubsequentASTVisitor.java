@@ -68,7 +68,7 @@ class SubsequentASTVisitor extends ASTVisitor
 	private HashMultimap<String, String> localMethods;
 	private HashSet<String> localClasses;
 	private JSONObject json;
-	
+	public HashSet<String> primitiveTypesSet;
 	
 	public void printFields()
 	{
@@ -107,6 +107,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		localMethods = HashMultimap.create(previousVisitor.localMethods);
 		localClasses = new HashSet<String>(previousVisitor.localClasses);
 		shortClassShortMethodCache = new HashMap<String, ArrayList<ArrayList<NodeJSON>>>(previousVisitor.shortClassShortMethodCache);
+		primitiveTypesSet = previousVisitor.primitiveTypesSet;
 		removeClustersIfAny();
 		updateImports();
 		updateBasedOnImports();
@@ -136,6 +137,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		MAX_CARDINALITY = previousVisitor.MAX_CARDINALITY;
 		localMethods = HashMultimap.create(previousVisitor.localMethods);
 		localClasses = new HashSet<String>(previousVisitor.localClasses);
+		primitiveTypesSet = previousVisitor.primitiveTypesSet;
 		removeClustersIfAny();
 		updateImports();
 		updateBasedOnImports();
@@ -763,17 +765,18 @@ class SubsequentASTVisitor extends ASTVisitor
 		
 	}
 	
+	private boolean isPrimitive(String arg) 
+	{
+		if(primitiveTypesSet.contains(arg))
+			return true;
+		return false;
+	}
+	
 	public void setJson()
 	{
 		checkForNull();
 		
-		//Add to primitive and uncomment to remove unwanted elements
-		HashSet<String> primitive = new HashSet<String>();
-		//primitive.add("int");
-		//primitive.add("long");
-
 		JSONObject main_json=new JSONObject();
-		
 		
 		for(Integer key : printtypes.keySet())
 		{
@@ -785,13 +788,7 @@ class SubsequentASTVisitor extends ASTVisitor
 				Set<NodeJSON> prunedValueSet = removeInheritedRetainParentType(printtypes.get(key));
 				for(NodeJSON type_name:prunedValueSet)
 				{
-					int isprimitive=0;
-					if(primitive.contains(type_name.getProperty("id")))
-					{
-						isprimitive = 1;
-						break;
-					}
-					if(isprimitive == 0)
+					//if(!isPrimitive(type_name.getProperty("id")))
 					{
 						String nameOfClass = (String)type_name.getProperty("id");
 						nameOfClass = JSONObject.quote(nameOfClass);
