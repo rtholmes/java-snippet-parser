@@ -40,7 +40,7 @@ public class JavaBaker
 
 	static JSONObject vistAST(GraphServerAccess db, CompilationUnit cu, int cutype, int tolerance, int max_cardinality)
 	{
-		
+		System.out.println(cu.toString());
 		long startTime = System.nanoTime();
 		PrefetchCandidates prefetch_visitor = new PrefetchCandidates(db,cu,cutype, tolerance, max_cardinality);
 		cu.accept(prefetch_visitor);
@@ -75,7 +75,6 @@ public class JavaBaker
 		cu.accept(third_visitor);
 		//System.out.println(third_visitor.printJson().toString(3));
 		//third_visitor.printFields();
-
 		SubsequentASTVisitor previous_visitor = second_visitor;
 		SubsequentASTVisitor current_visitor = third_visitor;
 
@@ -89,7 +88,9 @@ public class JavaBaker
 			current_visitor = new_visitor;
 		}
 		//current_visitor.printFields();
+		current_visitor.updateBasedOnImports();
 		current_visitor.setJson();
+		
 		return current_visitor.getJson();
 	}
 	

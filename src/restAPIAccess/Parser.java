@@ -6,6 +6,8 @@ import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.neo4j.kernel.StoreLockException;
 
 import RestAPI.GraphServerAccess;
@@ -58,12 +60,12 @@ class Parser{
 		}
 	}
 
-	private ASTParser getASTParser(String sourceCode) 
+	private ASTParser getASTParser(String sourceCode, int parserType) 
 	{
 		ASTParser parser = ASTParser.newParser(AST.JLS3);
-		parser.setResolveBindings(true);
-		parser.setStatementsRecovery(true);
-		parser.setKind(ASTParser.K_COMPILATION_UNIT);
+		//parser.setResolveBindings(true);
+		//parser.setStatementsRecovery(true);
+		parser.setKind(parserType);
 		parser.setSource(sourceCode.toCharArray());
 		return parser;
 	}
@@ -97,18 +99,18 @@ class Parser{
 	public CompilationUnit getCompilationUnitFromFile() throws IOException,	NullPointerException, ClassNotFoundException 
 	{
 		String code = getCodefromSnippet();
-		ASTParser parser = getASTParser(code);
+		ASTParser parser = getASTParser(code, ASTParser.K_COMPILATION_UNIT);
 		//System.out.println("--" + code);
 		ASTNode cu = (CompilationUnit) parser.createAST(null);
-		//System.out.println("++ "+cu.toString());
 		cutype = 0;
-		if (((CompilationUnit) cu).types().isEmpty()) 
+		if(((CompilationUnit) cu).types().isEmpty()) 
 		{
 			flag = 1;
 			// System.out.println("Missing class body, wrapper added");
 			cutype = 1;
 			String s1 = "public class sample{\n" + code + "\n}";
-			parser = getASTParser(s1);
+			//System.out.println(s1);
+			parser = getASTParser(s1, ASTParser.K_STATEMENTS);
 			cu = parser.createAST(null);
 			cu.accept(new ASTVisitor() 
 			{
@@ -120,18 +122,19 @@ class Parser{
 			});
 			if (flag == 1)
 			{
-				// System.out.println("Missing method, wrapper added");
+				//System.out.println("Missing method, wrapper added");
 				s1 = "public class sample{\n public void foo(){\n" + code
 						+ "\n}\n}";
 				cutype = 2;
-				parser = getASTParser(s1);
+				parser = getASTParser(s1, ASTParser.K_COMPILATION_UNIT);
 				cu = parser.createAST(null);
 			}
 			if (flag == 2) 
 			{
 				s1 = "public class sample{\n" + code + "\n}";
+				//System.out.println(s1);
 				cutype = 1;
-				parser = getASTParser(s1);
+				parser = getASTParser(s1, ASTParser.K_COMPILATION_UNIT);
 				cu = parser.createAST(null);
 			}
 		} 
@@ -139,7 +142,7 @@ class Parser{
 		{
 			// System.out.println("Has complete class and method bodies, code not modified");
 			cutype = 0;
-			parser = getASTParser(code);
+			parser = getASTParser(code, ASTParser.K_COMPILATION_UNIT);
 			cu = parser.createAST(null);
 		}
 		return (CompilationUnit) cu;
@@ -148,7 +151,7 @@ class Parser{
 	public CompilationUnit getCompilationUnitFromString(String code) throws IOException,
 	NullPointerException, ClassNotFoundException 
 	{
-		ASTParser parser = getASTParser(code);
+		ASTParser parser = getASTParser(code, ASTParser.K_COMPILATION_UNIT);
 		ASTNode cu = (CompilationUnit) parser.createAST(null);
 		//System.out.println(cu);
 		cutype = 0;
@@ -157,7 +160,7 @@ class Parser{
 			// System.out.println("Missing class body, wrapper added");
 			cutype = 1;
 			String s1 = "public class sample{\n" + code + "\n}";
-			parser = getASTParser(s1);
+			parser = getASTParser(s1, ASTParser.K_COMPILATION_UNIT);
 			cu = parser.createAST(null);
 			cu.accept(new ASTVisitor() {
 				public boolean visit(MethodDeclaration node) {
@@ -170,19 +173,19 @@ class Parser{
 				s1 = "public class sample{\n public void foo(){\n" + code
 						+ "\n}\n}";
 				cutype = 2;
-				parser = getASTParser(s1);
+				parser = getASTParser(s1, ASTParser.K_COMPILATION_UNIT);
 				cu = parser.createAST(null);
 			}
 			if (flag == 2) {
 				s1 = "public class sample{\n" + code + "\n}";
 				cutype = 1;
-				parser = getASTParser(s1);
+				parser = getASTParser(s1, ASTParser.K_COMPILATION_UNIT);
 				cu = parser.createAST(null);
 			}
 		} else {
 			// System.out.println("Has complete class and method bodies, code not modified");
 			cutype = 0;
-			parser = getASTParser(code);
+			parser = getASTParser(code, ASTParser.K_COMPILATION_UNIT);
 			cu = parser.createAST(null);
 		}
 		return (CompilationUnit) cu;

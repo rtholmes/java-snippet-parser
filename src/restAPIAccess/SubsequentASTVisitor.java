@@ -188,7 +188,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		}
 	}
 	
-	private void updateBasedOnImports()
+	public void updateBasedOnImports()
 	{
 		//Update variableTypeMap to hold only a possible import if one exists. Else leave untouched.
 		HashMultimap<Integer, NodeJSON> tempprinttypes = HashMultimap.create();
@@ -768,8 +768,9 @@ class SubsequentASTVisitor extends ASTVisitor
 		checkForNull();
 		
 		//Add to primitive and uncomment to remove unwanted elements
-		String[] primitive = {"int","float","char","long","boolean","String","byte[]","String[]","int[]","float[]","char[]","long[]","byte"};
-		//String[] primitive={};
+		HashSet<String> primitive = new HashSet<String>();
+		//primitive.add("int");
+		//primitive.add("long");
 
 		JSONObject main_json=new JSONObject();
 		
@@ -785,13 +786,10 @@ class SubsequentASTVisitor extends ASTVisitor
 				for(NodeJSON type_name:prunedValueSet)
 				{
 					int isprimitive=0;
-					for(String primitive_type : primitive)
+					if(primitive.contains(type_name.getProperty("id")))
 					{
-						if(((String)type_name.getProperty("id")).equals(primitive_type) == true)
-						{
-							isprimitive = 1;
-							break;
-						}
+						isprimitive = 1;
+						break;
 					}
 					if(isprimitive == 0)
 					{
