@@ -20,7 +20,7 @@ public class JavaBaker
 		String input_oracle = "http://gadget.cs:7474/db/data";
 		String input_file = "sample.txt";
 		int tolerance = 2;
-		int max_cardinality = 20;
+		int max_cardinality = 200;
 		Parser parser = new Parser(input_oracle, input_file);
 		CompilationUnit cu = parser.getCompilationUnitFromFile();
 		int cutype = parser.getCuType();
@@ -33,14 +33,13 @@ public class JavaBaker
 		System.out.println(vistAST(graphServer, cu, cutype, tolerance, max_cardinality).toString(3));
 		
 		long end = System.nanoTime();
-		logger.printAccessTime("JavaBaker total run: ", " ", end, start);
-		graphServer.logger.printMap();
+		//logger.printAccessTime("JavaBaker total run: ", " ", end, start);
+		//graphServer.logger.printMap();
 	}
 
 
 	static JSONObject vistAST(GraphServerAccess db, CompilationUnit cu, int cutype, int tolerance, int max_cardinality)
 	{
-		System.out.println(cu.toString());
 		long startTime = System.nanoTime();
 		PrefetchCandidates prefetch_visitor = new PrefetchCandidates(db,cu,cutype, tolerance, max_cardinality);
 		cu.accept(prefetch_visitor);
@@ -51,20 +50,17 @@ public class JavaBaker
 			
 		}
 		
-		System.out.println("@@worked!");
-		System.out.println(prefetch_visitor.candidateClassNodesCache.keySet().size() + " : " + prefetch_visitor.candidateMethodNodesCache.keySet().size());
-	    System.out.println("Finished all threads");
 	    long endTime = System.nanoTime();
 	    double time = (double)(endTime-startTime)/(1000000000);
-	    System.out.println(time);
+	    //System.out.println(time);
 	    
 	    FirstASTVisitor first_visitor = new FirstASTVisitor(prefetch_visitor);
 	    
 		
 		//FirstASTVisitor first_visitor = new FirstASTVisitor(db,cu,cutype, tolerance, max_cardinality);
 		cu.accept(first_visitor);
-		System.out.println(first_visitor.printJson().toString(3));
-		first_visitor.printFields();
+		//System.out.println(first_visitor.printJson().toString(3));
+		//first_visitor.printFields();
 
 		SubsequentASTVisitor second_visitor = new SubsequentASTVisitor(first_visitor);
 		cu.accept(second_visitor);

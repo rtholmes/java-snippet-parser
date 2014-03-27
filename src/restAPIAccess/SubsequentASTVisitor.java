@@ -268,7 +268,7 @@ class SubsequentASTVisitor extends ASTVisitor
 					{
 						importItem = importItem.substring(0, importItem.indexOf(".*"));
 					}
-					if(className.startsWith(importItem) || className.startsWith("java.lang"))
+					if(className.startsWith(importItem))
 					{
 						if(!prunedSet.contains(className))
 						{
@@ -277,6 +277,15 @@ class SubsequentASTVisitor extends ASTVisitor
 							flag = 1;
 						}
 					}
+				}
+			}
+			if(className.startsWith("java.lang"))
+			{
+				if(!prunedSet.contains(className))
+				{
+					prunedSet.add(className);
+					prunedClassElementList.add(classElement);
+					flag = 1;
 				}
 			}
 		}
@@ -428,35 +437,25 @@ class SubsequentASTVisitor extends ASTVisitor
 			Set<NodeJSON> newClassNodes = new HashSet<NodeJSON>();
 			int foundFlag= 0;
 			
+			if(currentMethods.size() == 0)
+				return;
 			for(NodeJSON candidateClassNode : candidateClassNodes)
 			{
 				for(NodeJSON method : currentMethods)
 				{
 					NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
+					NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
 					
-					if(parentNode.getProperty("id").equals(candidateClassNode.getProperty("id")))
+					if(parentNode.getProperty("id").equals(candidateClassNode.getProperty("id")) && contains(candidateReturnNodes, returnNode))
 					{
 						newMethodNodes.add(method);
 						newClassNodes.add(parentNode);
-						foundFlag = 1;
-					}
-				}
-			}
-			
-			for(NodeJSON candidateReturnNode : candidateReturnNodes)
-			{
-				for(NodeJSON method : currentMethods)
-				{
-					NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
-					
-					if(returnNode.getProperty("id").equals(candidateReturnNode.getProperty("id")))
-					{
-						newMethodNodes.add(method);
 						newReturnNodes.add(returnNode);
 						foundFlag = 1;
 					}
 				}
 			}
+			
 			
 			if(foundFlag == 0)
 			{
@@ -465,25 +464,12 @@ class SubsequentASTVisitor extends ASTVisitor
 					for(NodeJSON method : currentMethods)
 					{
 						NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
+						NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
 						
-						if(model.checkIfParentNode(parentNode, candidateClassNode.getProperty("id"), parentNodeCache))
+						if(model.checkIfParentNode(parentNode, candidateClassNode.getProperty("id"), parentNodeCache)  && contains(candidateReturnNodes, returnNode))
 						{
 							newMethodNodes.add(method);
 							newClassNodes.add(parentNode);
-							foundFlag = 1;
-						}
-					}
-				}
-				
-				for(NodeJSON candidateReturnNode : candidateReturnNodes)
-				{
-					for(NodeJSON method : currentMethods)
-					{
-						NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
-						
-						if(model.checkIfParentNode(returnNode, candidateReturnNode.getProperty("id"), parentNodeCache))
-						{
-							newMethodNodes.add(method);
 							newReturnNodes.add(returnNode);
 							foundFlag = 1;
 						}
@@ -496,9 +482,11 @@ class SubsequentASTVisitor extends ASTVisitor
 				for(NodeJSON newClassNode : newClassNodes)
 					addCorrespondingImport(newClassNode.getProperty("id").toString());
 			}
+			System.out.println(expression.toString() + " " + newClassNodes.size() + ":" + newMethodNodes.size()+ " " + treeNode.getName().toString());
 			temporaryMap1.replaceValues(rightScopeArray1, newClassNodes);
 			variableTypeMap.put(expression.toString(), temporaryMap1);
 			printtypes.replaceValues(printTypesMap.get(expression.toString()), newClassNodes);
+			printtypes.replaceValues(startPosition, newClassNodes);
 			temporaryMap2.replaceValues(rightScopeArray2, newReturnNodes);
 			methodReturnTypesMap.put(treeNodeString, temporaryMap2);
 			printmethods.replaceValues(startPosition, newMethodNodes);
