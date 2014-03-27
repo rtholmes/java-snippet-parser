@@ -482,7 +482,6 @@ class SubsequentASTVisitor extends ASTVisitor
 				for(NodeJSON newClassNode : newClassNodes)
 					addCorrespondingImport(newClassNode.getProperty("id").toString());
 			}
-			System.out.println(expression.toString() + " " + newClassNodes.size() + ":" + newMethodNodes.size()+ " " + treeNode.getName().toString());
 			temporaryMap1.replaceValues(rightScopeArray1, newClassNodes);
 			variableTypeMap.put(expression.toString(), temporaryMap1);
 			printtypes.replaceValues(printTypesMap.get(expression.toString()), newClassNodes);
