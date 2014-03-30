@@ -20,20 +20,28 @@ class Parser{
 	private String input_file;
 	private String input_oracle;
 	private int cutype;
-	
+	private String codeString;
+	private int bakerType;
 	/*
 	 * cutype = 0 => already has class body and method body
 	 * 			1 => has a method wrapper but no class
 	 * 			2 => missing both method and class wrapper (just a bunch of statements) 
 	 */
 	
-	public Parser(String oracle, String input_file_path) throws IOException 
+	public Parser(String oracle, String arg, int flag) throws IOException 
 	{
-		String path = getPath();
-		input_file = path + File.separator + input_file_path;
+		//flag = 0 => filename as arg, flag = 1 => code string as arg 
 		input_oracle = oracle;
+		bakerType = flag;
+		if(flag == 0)
+		{
+			String path = getPath();
+			input_file = path + File.separator + arg;
+		}
+		else
+			codeString = arg;
 	}
-
+	
 	private String getPath() throws IOException 
 	{
 		Process p = Runtime.getRuntime().exec("pwd");
@@ -98,7 +106,11 @@ class Parser{
 
 	public CompilationUnit getCompilationUnitFromFile() throws IOException,	NullPointerException, ClassNotFoundException 
 	{
-		String code = getCodefromSnippet();
+		String code = "";
+		if(bakerType == 0)
+			code = getCodefromSnippet();
+		else if(bakerType == 1)
+			code = codeString;
 		ASTParser parser = getASTParser(code, ASTParser.K_COMPILATION_UNIT);
 		//System.out.println("--" + code);
 		ASTNode cu = (CompilationUnit) parser.createAST(null);

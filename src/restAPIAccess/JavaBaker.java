@@ -21,7 +21,18 @@ public class JavaBaker
 		String input_file = "sample.txt";
 		int tolerance = 2;
 		int max_cardinality = 200;
-		Parser parser = new Parser(input_oracle, input_file);
+		Parser parser = null;
+		if(args.length == 0)
+			parser = new Parser(input_oracle, input_file, 0);
+		else if(args.length == 1)
+		{
+			PipeFetch pf = new PipeFetch();
+			String codeString = pf.fetchCode();
+			parser = new Parser(input_oracle, codeString, 1);
+		}
+		else
+			System.out.println("Invalid arguments.");
+		
 		CompilationUnit cu = parser.getCompilationUnitFromFile();
 		int cutype = parser.getCuType();
 		GraphServerAccess graphServer = parser.getGraph();
@@ -60,7 +71,7 @@ public class JavaBaker
 		//FirstASTVisitor first_visitor = new FirstASTVisitor(db,cu,cutype, tolerance, max_cardinality);
 		cu.accept(first_visitor);
 		//System.out.println(first_visitor.printJson().toString(3));
-		//first_visitor.printFields();
+		first_visitor.printFields();
 
 		SubsequentASTVisitor second_visitor = new SubsequentASTVisitor(first_visitor);
 		cu.accept(second_visitor);

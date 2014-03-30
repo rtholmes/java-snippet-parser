@@ -453,7 +453,7 @@ public class DumpIterator
 		String input_file = "sample.txt";
 		int tolerance = 3;
 		int max_cardinality = 10;
-		Parser parser = new Parser(input_oracle, input_file);
+		Parser parser = new Parser(input_oracle, input_file, 0);
 		GraphServerAccess db = parser.getGraph();
 		if(db == null)
 		{
