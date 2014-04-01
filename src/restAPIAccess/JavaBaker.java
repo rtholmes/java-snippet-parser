@@ -70,7 +70,7 @@ public class JavaBaker
 		
 		//FirstASTVisitor first_visitor = new FirstASTVisitor(db,cu,cutype, tolerance, max_cardinality);
 		cu.accept(first_visitor);
-		//System.out.println(first_visitor.printJson().toString(3));
+		System.out.println(first_visitor.printJson().toString(3));
 		first_visitor.printFields();
 
 		SubsequentASTVisitor second_visitor = new SubsequentASTVisitor(first_visitor);
@@ -94,11 +94,15 @@ public class JavaBaker
 			previous_visitor = current_visitor;
 			current_visitor = new_visitor;
 		}
-		//current_visitor.printFields();
+		current_visitor.printFields();
 		current_visitor.updateBasedOnImports();
+		//current_visitor.removeClustersIfAny();
 		current_visitor.setJson();
 		
 		return current_visitor.getJson();
+		//org.apache.http.impl.client.DefaultHttpClient, org.apache.http.impl.client.*, 
+		//org.apache.http.protocol.BasicHttpContext, 
+		//org.apache.http.client.*, org.apache.http.protocol.*, org.apache.http.impl.client.BasicCookieStore]
 	}
 	
 	private static boolean compareMaps(SubsequentASTVisitor curr, SubsequentASTVisitor prev) 

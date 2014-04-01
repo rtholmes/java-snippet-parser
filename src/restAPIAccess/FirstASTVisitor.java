@@ -1018,19 +1018,18 @@ class FirstASTVisitor extends ASTVisitor
 			{
 
 			}
-
+			methodReturnTypesMap.put(treeNodeString, candidateAccumulator);
+			printTypesMap.put(expressionString, expression.getStartPosition());
 			HashMultimap<ArrayList<Integer>, NodeJSON> temporaryMap = HashMultimap.create();
-			ArrayList<Integer> topLevelScope = new ArrayList<Integer>();
-			topLevelScope.add(0);
+			
 			if(replacementClassNodesList.size()!=0)
 			{
+				ArrayList<Integer> topLevelScope = new ArrayList<Integer>();
+				topLevelScope.add(0);
 				temporaryMap.replaceValues(topLevelScope, replacementClassNodesList);
 				variableTypeMap.put(expressionString, temporaryMap);
 				printtypes.replaceValues(printTypesMap.get(expressionString), replacementClassNodesList);
 			}
-			
-			methodReturnTypesMap.put(treeNodeString, candidateAccumulator);
-			printTypesMap.put(expressionString, expression.getStartPosition());
 			
 			if(replacementClassNodesList.size() < tolerance)
 			{
@@ -2135,6 +2134,7 @@ class FirstASTVisitor extends ASTVisitor
 			if(namelist.isEmpty()==false)
 			{
 				JSONObject json = new JSONObject();
+				System.out.println(cname);
 				json.accumulate("line_number",Integer.toString(cu.getLineNumber(key)-cutype));
 				json.accumulate("precision", Integer.toString(namelist.size()));
 				json.accumulate("name",cname);

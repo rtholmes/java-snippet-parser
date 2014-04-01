@@ -108,7 +108,7 @@ class SubsequentASTVisitor extends ASTVisitor
 		localClasses = new HashSet<String>(previousVisitor.localClasses);
 		shortClassShortMethodCache = new HashMap<String, ArrayList<ArrayList<NodeJSON>>>(previousVisitor.shortClassShortMethodCache);
 		primitiveTypesSet = previousVisitor.primitiveTypesSet;
-		removeClustersIfAny();
+		//removeClustersIfAny();
 		updateImports();
 		updateBasedOnImports();
 	}
@@ -159,10 +159,10 @@ class SubsequentASTVisitor extends ASTVisitor
 		{
 			Set<NodeJSON> temp = printmethods.get(key);
 			List<NodeJSON> parentNodes = Collections.synchronizedList(new ArrayList<NodeJSON>());
-			ExecutorService getMethodContainerExecutor = Executors.newFixedThreadPool(NThreads);
 			
 			if(temp.size() < tolerance)
 			{
+				ExecutorService getMethodContainerExecutor = Executors.newFixedThreadPool(NThreads);
 				for(NodeJSON node : temp)
 				{
 					ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(node, methodContainerCache, parentNodes, model);
@@ -446,8 +446,10 @@ class SubsequentASTVisitor extends ASTVisitor
 					NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
 					NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
 					
+					System.out.println("@@ " + method.getProperty("id"));
 					if(parentNode.getProperty("id").equals(candidateClassNode.getProperty("id")) && contains(candidateReturnNodes, returnNode))
 					{
+						System.out.println("%% " + method.getProperty("id"));
 						newMethodNodes.add(method);
 						newClassNodes.add(parentNode);
 						newReturnNodes.add(returnNode);
