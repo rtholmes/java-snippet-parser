@@ -17,7 +17,7 @@ public class JavaBaker
 	{
 		long start = System.nanoTime();
 		Logger logger = new Logger();
-		String input_oracle = "http://gadget.cs:7474/db/data";
+		String input_oracle = "http://localhost:7474/db/data";
 		String input_file = "sample.txt";
 		int tolerance = 2;
 		int max_cardinality = 200;

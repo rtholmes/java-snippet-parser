@@ -287,8 +287,10 @@ class FirstASTVisitor extends ASTVisitor
 		int loc = classID.indexOf('.');
 		if(loc != -1)
 		{
-			String possibleImport = classID.substring(0, classID.lastIndexOf(".")) + ".*";
-			importList.add(possibleImport);
+			//String possibleImport = classID.substring(0, classID.lastIndexOf(".")) + ".*";
+			//importList.add(possibleImport);
+			
+			importList.add(classID);
 		}
 	}
 
@@ -1907,9 +1909,9 @@ class FirstASTVisitor extends ASTVisitor
 	}
 
 	//Max parallel
-	public void endVisit(ClassInstanceCreation treeNode)
+	/*public void endVisit(ClassInstanceCreation treeNode)
 	{	
-		/*System.out.println("here -- ClassInstanceCreation");
+		System.out.println("here -- ClassInstanceCreation");
 		System.out.println("endvisit class inst cre 1");
 		int startPosition = treeNode.getType().getStartPosition();
 		String treeNodeType = treeNode.getType().toString();
@@ -1934,9 +1936,9 @@ class FirstASTVisitor extends ASTVisitor
 			printtypes.put(startPosition, candidateClassNode);
 			candidateAccumulator.put(scopeArray, candidateClassNode);
 		}
-		methodReturnTypesMap.put(treeNodeString, candidateAccumulator);*/
+		methodReturnTypesMap.put(treeNodeString, candidateAccumulator);
 
-	}
+	}*/
 
 	//Max parallel
 	public boolean visit(CastExpression node)
@@ -2134,7 +2136,7 @@ class FirstASTVisitor extends ASTVisitor
 			if(namelist.isEmpty()==false)
 			{
 				JSONObject json = new JSONObject();
-				System.out.println(cname);
+				System.out.println(key);
 				json.accumulate("line_number",Integer.toString(cu.getLineNumber(key)-cutype));
 				json.accumulate("precision", Integer.toString(namelist.size()));
 				json.accumulate("name",cname);
@@ -2190,18 +2192,24 @@ class FirstASTVisitor extends ASTVisitor
 	//Max parallel
 	public void checkForNull()
 	{
+		printtypes.removeAll(null);
+		printmethods.removeAll(null);
 		for(Integer key : printtypes.keySet())
+		{
 			for(NodeJSON type_name:printtypes.get(key))
 			{
 				if(type_name==null)
 					printtypes.remove(key, type_name);
 			}
+		}
 		for(Integer key : printmethods.keySet())
+		{
 			for(NodeJSON method_name:printmethods.get(key))
 			{
 				if(method_name==null)
 					printmethods.remove(key, method_name);
 			}
+		}
 	}
 
 
