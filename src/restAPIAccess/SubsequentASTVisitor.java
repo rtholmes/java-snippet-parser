@@ -447,10 +447,8 @@ class SubsequentASTVisitor extends ASTVisitor
 					NodeJSON parentNode = model.getMethodContainer(method, methodContainerCache);
 					NodeJSON returnNode = model.getMethodReturn(method, methodReturnCache);
 					
-					System.out.println("@@ " + method.getProperty("id"));
 					if(parentNode.getProperty("id").equals(candidateClassNode.getProperty("id")) && contains(candidateReturnNodes, returnNode))
 					{
-						System.out.println("%% " + method.getProperty("id"));
 						newMethodNodes.add(method);
 						newClassNodes.add(parentNode);
 						newReturnNodes.add(returnNode);

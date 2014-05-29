@@ -2136,7 +2136,7 @@ class FirstASTVisitor extends ASTVisitor
 			if(namelist.isEmpty()==false)
 			{
 				JSONObject json = new JSONObject();
-				System.out.println(key);
+				//System.out.println(key);
 				json.accumulate("line_number",Integer.toString(cu.getLineNumber(key)-cutype));
 				json.accumulate("precision", Integer.toString(namelist.size()));
 				json.accumulate("name",cname);

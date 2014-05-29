@@ -5,10 +5,14 @@ import java.io.IOException;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.json.JSONObject;
 
+import Node.IndexHits;
+import Node.NodeJSON;
 import RestAPI.GraphServerAccess;
 import RestAPI.Logger;
 
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.HashSet;
 
 
 public class JavaBaker
@@ -26,9 +30,8 @@ public class JavaBaker
 			parser = new Parser(input_oracle, input_file, 0);
 		else if(args.length == 1)
 		{
-			PipeFetch pf = new PipeFetch();
-			String codeString = pf.fetchCode();
-			parser = new Parser(input_oracle, codeString, 1);
+			input_file = args[0];
+			parser = new Parser(input_oracle, input_file, 0);
 		}
 		else
 			System.out.println("Invalid arguments.");
@@ -41,11 +44,36 @@ public class JavaBaker
 			System.out.println("db locked");
 		}
 		
-		System.out.println(vistAST(graphServer, cu, cutype, tolerance, max_cardinality).toString(3));
+		/*if(args.length == 1)
+		{
+			HashSet<String> retSet = new HashSet<String>();
+			IndexHits<NodeJSON> methods = graphServer.getCandidateMethodNodes("getSettings", new HashMap<String, IndexHits<NodeJSON>>());
+			for(NodeJSON method : methods)
+			{
+				NodeJSON ret = graphServer.getMethodReturn(method, new HashMap<NodeJSON, NodeJSON>());
+				retSet.add(ret.getProperty("id"));
+			}
+			for(String s : retSet)
+			{
+				System.out.println(s);
+			}
+			System.out.println(retSet.size());
+		}*/
+		//else
+		//{
+			System.out.println(vistAST(graphServer, cu, cutype, tolerance, max_cardinality).toString(3));
+		//}
 		
 		long end = System.nanoTime();
 		//logger.printAccessTime("JavaBaker total run: ", " ", end, start);
 		//graphServer.logger.printMap();
+	}
+
+
+	private static void doWhatISay() 
+	{
+		// 
+		
 	}
 
 
@@ -70,8 +98,8 @@ public class JavaBaker
 		
 		//FirstASTVisitor first_visitor = new FirstASTVisitor(db,cu,cutype, tolerance, max_cardinality);
 		cu.accept(first_visitor);
-		System.out.println(first_visitor.printJson().toString(3));
-		first_visitor.printFields();
+		//System.out.println(first_visitor.printJson().toString(3));
+		//first_visitor.printFields();
 
 		SubsequentASTVisitor second_visitor = new SubsequentASTVisitor(first_visitor);
 		cu.accept(second_visitor);
@@ -94,7 +122,7 @@ public class JavaBaker
 			previous_visitor = current_visitor;
 			current_visitor = new_visitor;
 		}
-		current_visitor.printFields();
+		//current_visitor.printFields();
 		current_visitor.updateBasedOnImports();
 		//current_visitor.removeClustersIfAny();
 		current_visitor.setJson();
