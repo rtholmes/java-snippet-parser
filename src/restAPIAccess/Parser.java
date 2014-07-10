@@ -112,7 +112,6 @@ class Parser{
 		else if(bakerType == 1)
 			code = codeString;
 		ASTParser parser = getASTParser(code, ASTParser.K_COMPILATION_UNIT);
-		//System.out.println("--" + code);
 		ASTNode cu = (CompilationUnit) parser.createAST(null);
 		cutype = 0;
 		if(((CompilationUnit) cu).types().isEmpty()) 

@@ -185,9 +185,9 @@ class SubsequentASTVisitor extends ASTVisitor
 		int loc = classID.indexOf('.');
 		if(loc != -1)
 		{
-			//String possibleImport = classID.substring(0, classID.lastIndexOf(".")) + ".*";
-			//importList.add(possibleImport);
-			importList.add(classID);
+			String possibleImport = classID.substring(0, classID.lastIndexOf(".")) + ".*";
+			importList.add(possibleImport);
+			//importList.add(classID);
 		}
 	}
 	

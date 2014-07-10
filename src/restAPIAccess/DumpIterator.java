@@ -102,7 +102,7 @@ public class DumpIterator
 					Future<JSONObject> ft = service.submit(call);
 					try 
 					{
-						op = ft.get(60, TimeUnit.SECONDS); 
+						op = ft.get(120, TimeUnit.SECONDS); 
 
 					} 
 					catch (TimeoutException ex)
@@ -181,19 +181,15 @@ public class DumpIterator
 			Element post = i.next();
 			Statement statement = connection.createStatement();
 			//2062 4948 5951 7225 7564 7922 8675 9984 12066 13358 14854 15578 17438 20196 21061 22755 24219 26848 /27306/<-crashed the ASTParser
-			if(count> 27306)
+			
+			//27306 28511 29957 30354 31334 31942 32819 33623
+
+			if(count> 33623)
 			{
-				if(count%1000 == 0)
-				{
-					
-				}
+
 				String qid = post.attributeValue("qid");
 				String aid = post.attributeValue("aid");
-				if(alreadyParsed.contains(aid) == true)
-				{
-					
-				}
-				else
+				if(alreadyParsed.contains(aid) == false)
 				{
 					String tagString = post.attributeValue("tags");
 					//System.out.println(tagString);
@@ -228,7 +224,7 @@ public class DumpIterator
 					else
 					{
 						final CompilationUnit cu = parser.getCompilationUnitFromString(code);
-						//System.out.println(code);
+						System.out.println(code);
 						final int cutype = parser.getCuType();
 						if(aid!=null && qid!=null && codeid!=null && initcode!=null)
 						{
@@ -248,13 +244,14 @@ public class DumpIterator
 								public JSONObject call() 
 								{
 									JSONObject jsonObject = JavaBaker.vistAST(db, cu, cutype, tolerance, max_cardinality);
+									System.out.println(jsonObject.toString(2));
 									return jsonObject;
 								}
 							};
 							Future<JSONObject> ft = service.submit(call);
 							try 
 							{
-								op = ft.get(60, TimeUnit.SECONDS); 
+								op = ft.get(120, TimeUnit.SECONDS); 
 
 							} 
 							catch (TimeoutException ex)
@@ -449,9 +446,9 @@ public class DumpIterator
 	{
 		long start = System.nanoTime();
 		Logger logger = new Logger();
-		String input_oracle = "http://gadget.cs:7474/db/data";
+		String input_oracle = "http://localhost:7474/db/data";
 		String input_file = "sample.txt";
-		int tolerance = 3;
+		int tolerance = 2;
 		int max_cardinality = 10;
 		Parser parser = new Parser(input_oracle, input_file, 0);
 		GraphServerAccess db = parser.getGraph();
@@ -460,7 +457,7 @@ public class DumpIterator
 			System.out.println("db locked");
 		}
 		
-		Connection connection = getDatabase("/home/s23subra/workspace/Java Snippet Parser/javadb_rerun.db");
+		Connection connection = getDatabase("/home/s23subra/workspace/Java Snippet Parser/javadb_rerun_restapi.db");
 		Element root = getCodeXML("/home/s23subra/workspace/stackoverflow/java_codes_tags.xml");
 		
 		

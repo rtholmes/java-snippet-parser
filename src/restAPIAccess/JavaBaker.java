@@ -24,7 +24,7 @@ public class JavaBaker
 		String input_oracle = "http://localhost:7474/db/data";
 		String input_file = "sample.txt";
 		int tolerance = 2;
-		int max_cardinality = 200;
+		int max_cardinality = 2000;
 		Parser parser = null;
 		if(args.length == 0)
 			parser = new Parser(input_oracle, input_file, 0);

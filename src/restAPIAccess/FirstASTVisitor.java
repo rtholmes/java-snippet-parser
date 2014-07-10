@@ -287,10 +287,10 @@ class FirstASTVisitor extends ASTVisitor
 		int loc = classID.indexOf('.');
 		if(loc != -1)
 		{
-			//String possibleImport = classID.substring(0, classID.lastIndexOf(".")) + ".*";
-			//importList.add(possibleImport);
+			String possibleImport = classID.substring(0, classID.lastIndexOf(".")) + ".*";
+			importList.add(possibleImport);
 			
-			importList.add(classID);
+			//importList.add(classID);
 		}
 	}
 
@@ -899,7 +899,6 @@ class FirstASTVisitor extends ASTVisitor
 				String candidateMethodExactName = (String)candidateMethodNode.getProperty("exactName");
 				if((candidateMethodExactName).equals( treeNode.getName().toString()))
 				{
-					
 					if(matchParams(candidateMethodNode, treeNode.arguments())==true)
 					{
 						printmethods.put(startPosition, candidateMethodNode);
@@ -978,7 +977,6 @@ class FirstASTVisitor extends ASTVisitor
 		}
 		else if(expressionString.matches("[A-Z][a-zA-Z]*"))
 		{
-
 			HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator = null;
 			if(methodReturnTypesMap.containsKey(treeNodeString))
 			{
@@ -1006,6 +1004,7 @@ class FirstASTVisitor extends ASTVisitor
 			for(int i=0; i<candidateMethodNodes.size(); i++)
 			{
 				NodeJSON candidateMethodNode = candidateMethodNodes.get(i);
+				//System.out.println(candidateMethodNode.getProperty("id") + treeNode.arguments().size());
 				if(matchParams(candidateMethodNode, treeNode.arguments())==true)
 				{
 					printmethods.put(startPosition, candidateMethodNode);
@@ -1204,13 +1203,16 @@ class FirstASTVisitor extends ASTVisitor
 		graphNodes = model.getMethodParams(me, methodParameterCache);
 
 		if(graphNodes.size() != params.size())
+		{
 			return false;
+		}
 		if(params.size()==0 && graphNodes.size()==0)
 		{
 			return true;
 		}
-		for(ASTNode param : params)
+		for(int i = 0; i< params.size(); i++)
 		{
+			ASTNode param = params.get(i);
 			HashSet<String> possibleTypes = new HashSet<String>();
 			if(param.getNodeType() == ASTNode.NUMBER_LITERAL)
 			{
@@ -1278,9 +1280,9 @@ class FirstASTVisitor extends ASTVisitor
 					HashMultimap<ArrayList<Integer>, NodeJSON> temporaryMap = methodReturnTypesMap.get(param.toString());
 					ArrayList<Integer> scopeArray = getScopeArray(param);
 					ArrayList<Integer> rightScopeArray = getNodeSet(temporaryMap, scopeArray);
-					if(rightScopeArray == null)
-						return false;
-					Set<NodeJSON> candidateClassNodes = temporaryMap.get(rightScopeArray);
+					Set<NodeJSON> candidateClassNodes = new HashSet<NodeJSON>();
+					if(rightScopeArray != null)
+						candidateClassNodes = temporaryMap.get(rightScopeArray);
 					for(NodeJSON localType : candidateClassNodes)
 					{
 						possibleTypes.add((String) localType.getProperty("id"));
@@ -1773,7 +1775,7 @@ class FirstASTVisitor extends ASTVisitor
 	}
 
 	//Max parallel
-	public boolean visit(final ClassInstanceCreation treeNode)
+	public void endVisit(final ClassInstanceCreation treeNode)
 	{
 		ASTNode anon=treeNode.getAnonymousClassDeclaration();
 		if(anon!=null)
@@ -1905,7 +1907,7 @@ class FirstASTVisitor extends ASTVisitor
 
 		}
 		methodReturnTypesMap.put(treeNodeString, candidateAccumulator);
-		return true;
+		return;
 	}
 
 	//Max parallel
@@ -2136,7 +2138,6 @@ class FirstASTVisitor extends ASTVisitor
 			if(namelist.isEmpty()==false)
 			{
 				JSONObject json = new JSONObject();
-				//System.out.println(key);
 				json.accumulate("line_number",Integer.toString(cu.getLineNumber(key)-cutype));
 				json.accumulate("precision", Integer.toString(namelist.size()));
 				json.accumulate("name",cname);
