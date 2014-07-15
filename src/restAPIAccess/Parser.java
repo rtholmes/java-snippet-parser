@@ -71,8 +71,9 @@ class Parser{
 	private ASTParser getASTParser(String sourceCode, int parserType) 
 	{
 		ASTParser parser = ASTParser.newParser(AST.JLS3);
-		//parser.setResolveBindings(true);
-		//parser.setStatementsRecovery(true);
+		parser.setResolveBindings(true);
+		parser.setStatementsRecovery(true);
+		parser.setBindingsRecovery(true);
 		parser.setKind(parserType);
 		parser.setSource(sourceCode.toCharArray());
 		return parser;
@@ -140,7 +141,7 @@ class Parser{
 				parser = getASTParser(s1, ASTParser.K_COMPILATION_UNIT);
 				cu = parser.createAST(null);
 			}
-			if (flag == 2) 
+			else if (flag == 2) 
 			{
 				s1 = "public class sample{\n" + code + "\n}";
 				//System.out.println(s1);

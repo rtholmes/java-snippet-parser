@@ -70,12 +70,6 @@ public class JavaBaker
 	}
 
 
-	private static void doWhatISay() 
-	{
-		// 
-		
-	}
-
 
 	static JSONObject vistAST(GraphServerAccess db, CompilationUnit cu, int cutype, int tolerance, int max_cardinality)
 	{
