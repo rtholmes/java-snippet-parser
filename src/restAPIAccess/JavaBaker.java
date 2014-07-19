@@ -5,14 +5,10 @@ import java.io.IOException;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.json.JSONObject;
 
-import Node.IndexHits;
-import Node.NodeJSON;
 import RestAPI.GraphServerAccess;
 import RestAPI.Logger;
 
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.HashSet;
 
 
 public class JavaBaker
@@ -44,25 +40,8 @@ public class JavaBaker
 			System.out.println("db locked");
 		}
 		
-		/*if(args.length == 1)
-		{
-			HashSet<String> retSet = new HashSet<String>();
-			IndexHits<NodeJSON> methods = graphServer.getCandidateMethodNodes("getSettings", new HashMap<String, IndexHits<NodeJSON>>());
-			for(NodeJSON method : methods)
-			{
-				NodeJSON ret = graphServer.getMethodReturn(method, new HashMap<NodeJSON, NodeJSON>());
-				retSet.add(ret.getProperty("id"));
-			}
-			for(String s : retSet)
-			{
-				System.out.println(s);
-			}
-			System.out.println(retSet.size());
-		}*/
-		//else
-		//{
-			System.out.println(vistAST(graphServer, cu, cutype, tolerance, max_cardinality).toString(3));
-		//}
+		
+		System.out.println(vistAST(graphServer, cu, cutype, tolerance, max_cardinality).toString(3));
 		
 		long end = System.nanoTime();
 		//logger.printAccessTime("JavaBaker total run: ", " ", end, start);
@@ -73,7 +52,6 @@ public class JavaBaker
 
 	static JSONObject vistAST(GraphServerAccess db, CompilationUnit cu, int cutype, int tolerance, int max_cardinality)
 	{
-		long startTime = System.nanoTime();
 		PrefetchCandidates prefetch_visitor = new PrefetchCandidates(db,cu,cutype, tolerance, max_cardinality);
 		cu.accept(prefetch_visitor);
 		prefetch_visitor.classFetchExecutor.shutdown();
@@ -83,14 +61,7 @@ public class JavaBaker
 			
 		}
 		
-	    long endTime = System.nanoTime();
-	    double time = (double)(endTime-startTime)/(1000000000);
-	    //System.out.println(time);
-	    
 	    FirstASTVisitor first_visitor = new FirstASTVisitor(prefetch_visitor);
-	    
-		
-		//FirstASTVisitor first_visitor = new FirstASTVisitor(db,cu,cutype, tolerance, max_cardinality);
 		cu.accept(first_visitor);
 		//System.out.println(first_visitor.printJson().toString(3));
 		//first_visitor.printFields();
@@ -104,6 +75,7 @@ public class JavaBaker
 		cu.accept(third_visitor);
 		//System.out.println(third_visitor.printJson().toString(3));
 		//third_visitor.printFields();
+		
 		SubsequentASTVisitor previous_visitor = second_visitor;
 		SubsequentASTVisitor current_visitor = third_visitor;
 
@@ -111,20 +83,14 @@ public class JavaBaker
 		{
 			SubsequentASTVisitor new_visitor = new SubsequentASTVisitor(current_visitor);
 			cu.accept(new_visitor);
-			//System.out.println(new_visitor.printJson().toString(3));
-			//new_visitor.printFields();
 			previous_visitor = current_visitor;
 			current_visitor = new_visitor;
 		}
-		//current_visitor.printFields();
 		current_visitor.updateBasedOnImports();
 		//current_visitor.removeClustersIfAny();
 		current_visitor.setJson();
 		
 		return current_visitor.getJson();
-		//org.apache.http.impl.client.DefaultHttpClient, org.apache.http.impl.client.*, 
-		//org.apache.http.protocol.BasicHttpContext, 
-		//org.apache.http.client.*, org.apache.http.protocol.*, org.apache.http.impl.client.BasicCookieStore]
 	}
 	
 	private static boolean compareMaps(SubsequentASTVisitor curr, SubsequentASTVisitor prev) 
