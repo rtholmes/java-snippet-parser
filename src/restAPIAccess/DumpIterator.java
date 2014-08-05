@@ -336,13 +336,20 @@ public class DumpIterator
 		for (@SuppressWarnings("unchecked")
 		Iterator<Element> i = root.elementIterator(); i.hasNext(); ) 
 		{
+			//aid = 5828079
 			count++;
 			Element post = i.next();
 			Statement statement = connection.createStatement();
-
-			if(count> 0)
+			//432	1427	1725	unclear when it stopped post 1725, restarting from 4000
+			//4116 Crashed. Restarting from 5000
+			//5000 5382 5456 5497 5526 5540 5944 5951 6102 6458
+			//6485
+			if(post.attributeValue("aid").equals("5828079"))
 			{
-
+				//System.out.println(count);
+			}
+			if(count > 6485)
+			{
 				String qid = post.attributeValue("qid");
 				String aid = post.attributeValue("aid");
 				String code = post.element("code").getText();
@@ -353,9 +360,9 @@ public class DumpIterator
 				code = code.replace("&gt;", ">");
 				code = code.replace("&amp;", "&");
 				code = code.replace("&quot;", "\"");
-
+				
+				//System.out.println(code);
 				final CompilationUnit cu = parser.getCompilationUnitFromString(code);
-				System.out.println(code);
 				
 				final int cutype = parser.getCuType();
 				if(aid!=null && qid!=null && codeid!=null && initcode!=null)
@@ -376,7 +383,7 @@ public class DumpIterator
 						public JSONObject call() 
 						{
 							JSONObject jsonObject = JavaBaker.vistAST(db, cu, cutype, tolerance, max_cardinality);
-							System.out.println(jsonObject.toString(2));
+							//System.out.println(jsonObject.toString(2));
 							return jsonObject;
 						}
 					};
@@ -413,18 +420,20 @@ public class DumpIterator
 				if(op!=null)
 				{
 					finished++;
-					String q1 = "delete from types where aid = '"+aid+"'";
-					String q2 = "delete from methods where aid = '"+aid+"'";
-					statement.executeUpdate(q1);
-					statement.executeUpdate(q2);
+					//String q1 = "delete from types where aid = '"+aid+"'";
+					//String q2 = "delete from methods where aid = '"+aid+"'";
+					//statement.executeUpdate(q1);
+					//statement.executeUpdate(q2);
 					if (op.get("api_elements") instanceof JSONObject)
 					{
 						JSONObject apielements = op.getJSONObject("api_elements");
+						System.out.println(count+ ":"+ finished + ":"+qid+":"+aid+":"+codeid + " : 1");
 						insert(apielements, statement, aid, qid, codeid, code, Integer.toString(cutype));
 					}
 					else if (op.get("api_elements") instanceof JSONArray)
 					{
 						JSONArray apielements = op.getJSONArray("api_elements");
+						System.out.println(count+ ":"+ finished + ":"+qid+":"+aid+":"+codeid + " : " + apielements.length());
 						for(int j=0; j < apielements.length(); j++)
 						{
 							JSONObject obj = (JSONObject) apielements.get(j);
@@ -432,11 +441,15 @@ public class DumpIterator
 						}
 					}
 				}
-
-				System.out.println(count+ ":"+ finished + ":"+qid+":"+aid+":"+codeid);
+				else
+				{
+					System.out.println(count+ ":"+ finished + ":"+qid+":"+aid+":"+codeid + " : 0");
+				}
 			}
 		}
 	}
+	
+	
 
 	private static void insert(JSONObject obj, Statement statement, String aid, String qid, String codeid, String code, String cutype) throws SQLException 
 	{
