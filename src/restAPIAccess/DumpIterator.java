@@ -343,12 +343,12 @@ public class DumpIterator
 			//432	1427	1725	unclear when it stopped post 1725, restarting from 4000
 			//4116 Crashed. Restarting from 5000
 			//5000 5382 5456 5497 5526 5540 5944 5951 6102 6458
-			//6485
-			if(post.attributeValue("aid").equals("5828079"))
+			//6485 6755 7051 7224 7265 7359
+			if(post.attributeValue("aid").equals("7930877"))
 			{
 				//System.out.println(count);
 			}
-			if(count > 6485)
+			if(count > 7359)
 			{
 				String qid = post.attributeValue("qid");
 				String aid = post.attributeValue("aid");
