@@ -30,7 +30,7 @@ public class JavaBaker
 			parser = new Parser(input_oracle, input_file, 0);
 		}
 		else
-			System.out.println("Invalid arguments.");
+			System.out.println("Invalid arguments");
 		
 		CompilationUnit cu = parser.getCompilationUnitFromFile();
 		int cutype = parser.getCuType();
