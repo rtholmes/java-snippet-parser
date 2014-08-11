@@ -2,25 +2,25 @@
 <classpath>
 	<classpathentry excluding="MyNewASTVisitor.java|checkAST.java|MyASTVisitor.java" kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/dom4j-1.6.1.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/guava-r09.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/json-rpc-1.0.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/org.eclipse.jdt.core_3.5.2.v_981_R35x.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/sqlite-jdbc-3.7.2.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/ca.uwaterloo.cs.se.inconsistency.core"/>
 	<classpathentry kind="src" path="/model-generator"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/org.eclipse.core.resources_3.5.2.R35x_v20091203-1235.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/org.eclipse.core.runtime_3.5.0.v20090525.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/org.eclipse.equinox.common_3.5.1.R35x_v20090807-1100.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/org.eclipse.osgi_3.5.2.R35x_v20100126.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/lucene-core-3.6.2.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/jersey-client-1.4.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/jersey-core-1.4.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/jersey-server-1.4.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/org.eclipse.equinox.preferences_3.2.301.R35x_v20091117.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/commons-lang-2.4.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/org.eclipse.core.jobs-3.5.100.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/dependencies/contenttype-3.4.200-v20140207-1251.jar"/>
-	<classpathentry kind="lib" path="/home/s23subra/workspace/model-generator/dependencies/neo4j-kernel-2.0.1.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/commons-lang-2.4.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/contenttype-3.4.200-v20140207-1251.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/dom4j-1.6.1.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/guava-r09.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/jersey-client-1.4.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/jersey-core-1.4.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/jersey-server-1.4.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/json-rpc-1.0.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/lucene-core-3.6.2.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/neo4j-kernel-2.0.1.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/org.eclipse.core.jobs-3.5.100.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/org.eclipse.core.resources_3.5.2.R35x_v20091203-1235.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/org.eclipse.core.runtime_3.5.0.v20090525.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/org.eclipse.equinox.common_3.5.1.R35x_v20090807-1100.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/org.eclipse.equinox.preferences_3.2.301.R35x_v20091117.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/org.eclipse.jdt.core_3.5.2.v_981_R35x.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/org.eclipse.osgi_3.5.2.R35x_v20100126.jar"/>
+	<classpathentry kind="lib" path="/home/siddharth/workspace/Java Snippet Parser/dependencies/sqlite-jdbc-3.7.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
