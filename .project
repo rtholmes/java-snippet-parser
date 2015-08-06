@@ -3,8 +3,6 @@
 	<name>Java Snippet Parser</name>
 	<comment></comment>
 	<projects>
-		<project>ca.uwaterloo.cs.se.inconsistency.core</project>
-		<project>model-generator</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
@@ -22,11 +20,4 @@
 		<nature>org.eclipse.m2e.core.maven2Nature</nature>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
-	<linkedResources>
-		<link>
-			<name>src/JavaBaker.java</name>
-			<type>1</type>
-			<location>/home/siddharth/workspace/Java Snippet Parser/src/JavaBaker.java</location>
-		</link>
-	</linkedResources>
 </projectDescription>
