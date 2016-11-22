@@ -9,7 +9,7 @@ Java Snippet Parser - Parses incomplete Java source code snippets to identify AP
 ```
 #!java
 
-1. Inconsistencyinspectorresources takes in a JAR file and returns an XML with all of its API. https:\/\/bitbucket.org\/rtholmes\/inconsistencyinspectorresources. Use it as described under the static resources part in the README.
+1. Inconsistencyinspectorresources takes in a JAR file and returns an XML with all of its API. https:"*&#47;"\/bitbucket.org\/rtholmes\/inconsistencyinspectorresources. Use it as described under the static resources part in the README.
 2. Once you have the XML, clone this repository - https:\/\/bitbucket.org\/siddhukrs\/model-generator. This is the repo that contains scripts to build the graph. In Graph.java in the default package, in the main method, rename fname2 to point to the XML and DB_PATH to where you want the graph written. If you have multiple XML files from multiple JARs, use the commented out block of code below it to iterate through the files. Any dependencies required by the project are in the dependencies folder. This writes the graph to DB_PATH.
 ```
 
